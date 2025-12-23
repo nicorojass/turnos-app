@@ -3,6 +3,7 @@ package turnos.app.service;
 import turnos.app.model.Cliente;
 import turnos.app.model.EstadoTurno;
 import turnos.app.model.Turno;
+import turnos.app.repository.TurnoRepository;
 
 import java.time.LocalDate;
 import java.time.LocalTime;
@@ -12,6 +13,7 @@ import java.util.List;
 public class AgendaService {
 
     private List<Turno> turnos;
+    private TurnoRepository repo = new TurnoRepository();
     private int contadorTurnos = 1;
 
     public AgendaService() {
@@ -40,7 +42,7 @@ public class AgendaService {
                 EstadoTurno.ACTIVO
         );
 
-        turnos.add(t);
+        repo.guardar(t);
         return t;
     }
 
@@ -54,11 +56,10 @@ public class AgendaService {
     }
 
     public void cancelarTurno(int idTurno) {
-        Turno t = buscarTurno(idTurno);
-        t.setEstado(EstadoTurno.CANCELADO);
+        repo.cancelarTurno(idTurno);
     }
 
     public List<Turno> listarTurnos() {
-        return turnos;
+        return repo.listar();
     }
 }

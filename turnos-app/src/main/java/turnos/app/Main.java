@@ -2,6 +2,7 @@ package turnos.app;
 
 import turnos.app.model.Cliente;
 import turnos.app.model.Turno;
+import turnos.app.repository.DatabaseInit;
 import turnos.app.service.AgendaService;
 import turnos.app.ui.ConsolaUI;
 

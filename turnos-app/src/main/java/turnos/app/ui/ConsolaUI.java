@@ -76,12 +76,19 @@ public class ConsolaUI {
         int dia = scanner.nextInt();
         scanner.nextLine();
 
-        System.out.println("Ingrese hora del turno");
-        int hora = scanner.nextInt();
-        scanner.nextLine();
+        int hora;
+        do{
+            System.out.println("Ingrese hora del turno (de 8:00 a 16:00)");
+            hora = scanner.nextInt();
+            scanner.nextLine();
+        }while (hora < 8 && hora > 16);
+
 
         Cliente c = new Cliente(nombre, dni, telefono);
         LocalDate fecha = LocalDate.of(año,mes,dia);
+        if (fecha.isBefore(LocalDate.now())) {
+            throw new IllegalArgumentException("No se pueden crear turnos en fechas pasadas");
+        }
         LocalTime horario = LocalTime.of(hora,0 );
 
         agendaService.crearTurno(c, fecha, horario);
