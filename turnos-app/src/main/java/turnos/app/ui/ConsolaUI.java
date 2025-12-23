@@ -1,6 +1,7 @@
 package turnos.app.ui;
 
 import turnos.app.model.Cliente;
+import turnos.app.model.Turno;
 import turnos.app.service.AgendaService;
 
 import java.time.LocalDate;
@@ -72,7 +73,7 @@ public class ConsolaUI {
         System.out.println("Ingrese mes");
         int mes = scanner.nextInt();
         scanner.nextLine();
-        System.out.println("Ingrese mes");
+        System.out.println("Ingrese dia");
         int dia = scanner.nextInt();
         scanner.nextLine();
 
@@ -118,10 +119,5 @@ public class ConsolaUI {
 
         agendaService.listarTurnos().forEach(System.out::println);
     }
-
-
-
-
-
 
 }

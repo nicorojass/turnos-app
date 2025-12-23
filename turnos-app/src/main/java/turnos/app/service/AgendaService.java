@@ -12,21 +12,15 @@ import java.util.List;
 
 public class AgendaService {
 
-    private List<Turno> turnos;
     private TurnoRepository repo = new TurnoRepository();
     private int contadorTurnos = 1;
 
     public AgendaService() {
-        this.turnos = new ArrayList<>();
+        this.repo = repo;
     }
 
     private boolean existeTurno(LocalDate fecha, LocalTime hora) {
-        return turnos.stream()
-                .anyMatch(t ->
-                        t.getFecha().equals(fecha) &&
-                                t.getHora().equals(hora) &&
-                                t.getEstado() == EstadoTurno.ACTIVO
-                );
+        return repo.existeTurno(fecha, hora);
     }
 
     public Turno crearTurno(Cliente c, LocalDate fecha, LocalTime hora) {
@@ -46,13 +40,9 @@ public class AgendaService {
         return t;
     }
 
-    private Turno buscarTurno(int id) {
-        return turnos.stream()
-                .filter(t -> t.getId() == id)
-                .findFirst()
-                .orElseThrow(() ->
-                        new IllegalArgumentException("No se encontró turno con ese ID")
-                );
+    public Turno buscarTurno(int id) {
+        Turno t = repo.buscarTurno(id);
+        return t;
     }
 
     public void cancelarTurno(int idTurno) {
