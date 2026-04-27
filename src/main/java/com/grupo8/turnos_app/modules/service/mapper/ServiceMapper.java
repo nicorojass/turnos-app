@@ -3,7 +3,7 @@ package com.grupo8.turnos_app.modules.service.mapper;
 import com.grupo8.turnos_app.modules.service.Service;
 import com.grupo8.turnos_app.modules.service.dto.ServiceRequest;
 import com.grupo8.turnos_app.modules.service.dto.ServiceResponse;
-import java.math.BigDecimal;
+
 
 public class ServiceMapper {
 
@@ -18,7 +18,7 @@ public class ServiceMapper {
                 .price(service.getPrice().doubleValue())
                 .businessId(service.getBusiness().getId())
                 .build();
-    }    
+    }
 
     public static Service toEntity(ServiceRequest serviceRequest) {
         if (serviceRequest == null) {
@@ -32,9 +32,4 @@ public class ServiceMapper {
 
         return service;
     }
-
-
 }
-
-
-    
