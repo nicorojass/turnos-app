@@ -7,6 +7,7 @@ import org.hibernate.validator.constraints.Length;
 import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
+import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -24,9 +25,10 @@ public class ServiceRequest {
     @Length(max = 255, message = "Name must be less than 255 characters")
     private String name;
 
-    @NotBlank(message = "Description is required")
-    @Length(max = 255, message = "Description must be less than 255 characters")
-    private String description;
+    
+    @Positive(message = "Duration must be a positive integer")
+    @NotNull(message = "Duration is required")
+    private Integer durationMinutes;
 
     @NotNull(message = "Price is required")
     @DecimalMin(value = "0.01", message = "Price must be a positive number")
