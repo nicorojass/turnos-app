@@ -1,13 +1,10 @@
 package com.grupo8.turnos_app.modules.service;
-
+import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ServiceRepository {
-    Service save(Service service);
-    Service findById(Long id);
-    void deleteById(Long id);
-    Iterable<Service> findAll();
+public interface ServiceRepository extends JpaRepository<Service, Long> {
+    
     Iterable<Service> findByBusinessId(Long businessId);
 
 }
