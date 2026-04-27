@@ -1,17 +1,17 @@
 package com.grupo8.turnos_app.modules.service.mapper;
 
-import com.grupo8.turnos_app.modules.service.Service;
-import com.grupo8.turnos_app.modules.service.dto.ServiceRequest;
-import com.grupo8.turnos_app.modules.service.dto.ServiceResponse;
+import com.grupo8.turnos_app.modules.service.Serv;
+import com.grupo8.turnos_app.modules.service.dto.ServRequest;
+import com.grupo8.turnos_app.modules.service.dto.ServResponse;
 
 
 public class ServiceMapper {
 
-    public static ServiceResponse toResponse(Service service) {
+    public static ServResponse toResponse(Serv service) {
         if (service == null) {
             return null;
         }
-        return ServiceResponse.builder()
+        return ServResponse.builder()
                 .id(service.getId())
                 .name(service.getName())
                 .durationMinutes(service.getDurationMinutes())
@@ -20,16 +20,11 @@ public class ServiceMapper {
                 .build();
     }
 
-    public static Service toEntity(ServiceRequest serviceRequest) {
-        if (serviceRequest == null) {
-            return null;
-        }
-        Service service = new Service();
-        service.setName(serviceRequest.getName());
-        service.setDurationMinutes(serviceRequest.getDurationMinutes());
-        service.setPrice(serviceRequest.getPrice());
-        service.setBusinessId(serviceRequest.getBusinessId());
-
-        return service;
+    public static Serv toEntity(ServRequest serviceRequest) {
+        return Serv.builder()
+                .name(serviceRequest.getName())
+                .durationMinutes(serviceRequest.getDurationMinutes())
+                .price(serviceRequest.getPrice())
+                .build();
     }
 }

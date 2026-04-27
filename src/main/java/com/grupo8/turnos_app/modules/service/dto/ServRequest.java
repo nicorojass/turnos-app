@@ -19,7 +19,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class ServiceRequest {
+public class ServRequest {
     
     @NotBlank(message = "Name is required")
     @Length(max = 255, message = "Name must be less than 255 characters")

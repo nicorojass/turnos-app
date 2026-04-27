@@ -3,8 +3,8 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
 @Repository
-public interface ServiceRepository extends JpaRepository<Service, Long> {
+public interface ServRepository extends JpaRepository<Serv, Long> {
     
-    Iterable<Service> findByBusinessId(Long businessId);
+    Iterable<Serv> findByBusinessId(Long businessId);
 
 }

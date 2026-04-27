@@ -11,7 +11,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class ServiceResponse {
+public class ServResponse {
     
     private Long id;
     private String name;
