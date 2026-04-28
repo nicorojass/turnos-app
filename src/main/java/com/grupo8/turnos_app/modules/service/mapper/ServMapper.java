@@ -15,7 +15,8 @@ public class ServMapper {
                 .id(service.getId())
                 .name(service.getName())
                 .durationMinutes(service.getDurationMinutes())
-                .price(service.getPrice().doubleValue())
+                .price(service.getPrice())
+                .depositPorcentage(service.getDepositPorcentage())
                 .businessId(service.getBusiness().getId())
                 .build();
     }
@@ -25,6 +26,7 @@ public class ServMapper {
                 .name(serviceRequest.getName())
                 .durationMinutes(serviceRequest.getDurationMinutes())
                 .price(serviceRequest.getPrice())
+                .depositPorcentage(serviceRequest.getDepositPorcentage())
                 .build();
     }
 }

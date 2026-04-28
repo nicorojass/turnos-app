@@ -38,6 +38,9 @@ public class Serv {
     @Positive
     private BigDecimal price;
 
+    @Column(name="deposit_porcentage")
+    private BigDecimal depositPorcentage;
+
     @Positive
     @Column(name="duration_minutes")
     private Integer durationMinutes;
