@@ -5,7 +5,7 @@ import com.grupo8.turnos_app.modules.service.dto.ServRequest;
 import com.grupo8.turnos_app.modules.service.dto.ServResponse;
 
 
-public class ServiceMapper {
+public class ServMapper {
 
     public static ServResponse toResponse(Serv service) {
         if (service == null) {

@@ -7,7 +7,7 @@ import org.springframework.stereotype.Service;
 import com.grupo8.turnos_app.modules.business.Business;
 import com.grupo8.turnos_app.modules.service.dto.ServRequest;
 import com.grupo8.turnos_app.modules.service.dto.ServResponse;
-import com.grupo8.turnos_app.modules.service.mapper.ServiceMapper;
+import com.grupo8.turnos_app.modules.service.mapper.ServMapper;
 
 import lombok.RequiredArgsConstructor;
 
@@ -23,16 +23,16 @@ public class ServService {
         Business business = businessRepository.findById(request.getBusinessId())
             .orElseThrow(() -> new RuntimeException("Business not found"));
 
-        Serv service = ServiceMapper.toEntity(request);
+        Serv service = ServMapper.toEntity(request);
         service.setBusiness(business);
 
-        return ServiceMapper.toResponse(serviceRepository.save(service));
+        return ServMapper.toResponse(serviceRepository.save(service));
     }
 
     public List<ServResponse> getServicesByBusinessId(Long businessId) {
         List<Serv> services = serviceRepository.findByBusinessId(businessId);
         return services.stream()
-                .map(ServiceMapper::toResponse)
+                .map(ServMapper::toResponse)
                 .toList();
     }
 
@@ -44,7 +44,7 @@ public class ServService {
         service.setPrice(request.getPrice());
         service.setDurationMinutes(request.getDurationMinutes());
 
-        return ServiceMapper.toResponse(serviceRepository.save(service));
+        return ServMapper.toResponse(serviceRepository.save(service));
 }
 
     public void deleteService(Long serviceId) {
