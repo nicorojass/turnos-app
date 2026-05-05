@@ -48,4 +48,5 @@ public class Serv {
     @ManyToOne
     private Business business;
 
+    private Boolean deleted;
 }

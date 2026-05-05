@@ -25,6 +25,7 @@ public class ServService {
 
         Serv service = ServMapper.toEntity(request);
         service.setBusiness(business);
+        service.setDeleted(false);
 
         return ServMapper.toResponse(serviceRepository.save(service));
     }
@@ -48,9 +49,8 @@ public class ServService {
 }
 
     public void deleteService(Long serviceId) {
-        if (!serviceRepository.existsById(serviceId)) {
-            throw new RuntimeException("Service not found");
-        }
-        serviceRepository.deleteById(serviceId);
+        Serv service = serviceRepository.findById(serviceId).orElseThrow(() -> new RuntimeException("Service not found"));
+        service.setDeleted(true);
+        serviceRepository.save(service);
     }
 }
