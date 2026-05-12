@@ -1,4 +1,4 @@
-package com.grupo8.turnos_app.modules.business;
+package com.grupo8.turnos_app.modules.business.services;
 
 import java.util.List;
 
@@ -6,10 +6,11 @@ import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.modules.business.dto.BusinessRequest;
 import com.grupo8.turnos_app.modules.business.dto.BusinessResponse;
+import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.mapper.BusinessMapper;
+import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 
 import lombok.RequiredArgsConstructor;
-
 
 @Service
 @RequiredArgsConstructor
@@ -20,9 +21,12 @@ public class BusinessService {
 
     public BusinessResponse createBusiness(BusinessRequest request) {
         
-        if(!businessRepository.existsByEmailAndSlugAndPhone(request.getEmail(), request.getSlug(), request.getPhone())) {
-            throw new RuntimeException("Business with the same email, slug or phone already exists");
-        }
+        if (businessRepository.existsByEmail(request.getEmail()))
+            throw new RuntimeException("A business with that email already exists");
+        if (businessRepository.existsBySlug(request.getSlug()))
+            throw new RuntimeException("A business with that slug already exists");
+        if (businessRepository.existsByPhone(request.getPhone()))
+            throw new RuntimeException("A business with that phone already exists");
 
         User owner = userRepository.findById(request.getOwnerId())
             .orElseThrow(() -> new RuntimeException("Owner not found"));
@@ -71,6 +75,13 @@ public class BusinessService {
         business.setOwner(owner);
 
         return BusinessMapper.toResponse(businessRepository.save(business));
+    }
+
+    public void toggleBusinessActive(Long id) {
+        Business business = businessRepository.findById(id)
+            .orElseThrow(() -> new RuntimeException("Business not found"));
+        business.setActive(!business.getActive());
+        businessRepository.save(business);
     }
 
     public void deleteBusiness(Long id) {

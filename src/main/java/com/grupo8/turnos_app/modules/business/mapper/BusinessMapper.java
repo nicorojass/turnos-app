@@ -1,8 +1,8 @@
 package com.grupo8.turnos_app.modules.business.mapper;
 
-import com.grupo8.turnos_app.modules.business.Business;
 import com.grupo8.turnos_app.modules.business.dto.BusinessRequest;
 import com.grupo8.turnos_app.modules.business.dto.BusinessResponse;
+import com.grupo8.turnos_app.modules.business.entities.Business;
 
 public class BusinessMapper {
 
