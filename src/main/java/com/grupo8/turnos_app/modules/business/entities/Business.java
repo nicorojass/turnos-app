@@ -1,4 +1,4 @@
-package com.grupo8.turnos_app.modules.business;
+package com.grupo8.turnos_app.modules.business.entities;
 
 import java.time.LocalDateTime;
 
@@ -11,6 +11,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -52,7 +53,14 @@ public class Business {
 
     private Integer scheduleAnticipation;
 
-    @OneToOne(mappedBy = "business", fetch = FetchType.LAZY)
+    private Boolean active;
+
+    @PrePersist
+    protected void OnCreate() {
+        active = true;
+    }
+
+    @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 }
