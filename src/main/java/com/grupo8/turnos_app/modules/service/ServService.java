@@ -5,7 +5,8 @@ import java.util.List;
 import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.exception.NotFoundException;
-import com.grupo8.turnos_app.modules.business.Business;
+import com.grupo8.turnos_app.modules.business.entities.Business;
+import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.service.dto.ServRequest;
 import com.grupo8.turnos_app.modules.service.dto.ServResponse;
 import com.grupo8.turnos_app.modules.service.mapper.ServMapper;

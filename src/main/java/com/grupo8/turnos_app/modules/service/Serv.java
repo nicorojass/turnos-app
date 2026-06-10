@@ -2,7 +2,7 @@ package com.grupo8.turnos_app.modules.service;
 
 import java.math.BigDecimal;
 
-import com.grupo8.turnos_app.modules.business.Business;
+import com.grupo8.turnos_app.modules.business.entities.Business;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
