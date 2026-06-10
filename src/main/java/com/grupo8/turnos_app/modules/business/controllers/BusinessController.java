@@ -6,7 +6,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -50,12 +49,6 @@ public class BusinessController {
     @PutMapping("/{id}")
     public ResponseEntity<BusinessResponse> updateBusiness(@PathVariable Long id, @RequestBody @Valid BusinessRequest request) {
         return ResponseEntity.ok(businessService.updateBusiness(id, request));
-    }
-
-    @PatchMapping("/{id}")
-    public ResponseEntity<Void> toggleBusinessActive(@PathVariable Long id) {
-        businessService.toggleBusinessActive(id);
-        return ResponseEntity.noContent().build();
     }
 
     @DeleteMapping("/{id}")

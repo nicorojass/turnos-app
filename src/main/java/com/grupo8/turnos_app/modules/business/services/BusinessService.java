@@ -10,7 +10,6 @@ import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.entities.BusinessType;
 import com.grupo8.turnos_app.modules.business.mapper.BusinessMapper;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
-import com.grupo8.turnos_app.modules.business.entities.BusinessType;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessTypeRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -81,26 +80,25 @@ public class BusinessService {
         return BusinessMapper.toResponse(businessRepository.save(business));
     }
 
-    public void toggleBusinessActive(Long id) {
+    public void deleteBusiness(Long id) {
         Business business = businessRepository.findById(id)
             .orElseThrow(() -> new RuntimeException("Business not found"));
-        business.setActive(!business.getActive());
+        business.setActive(false);
         businessRepository.save(business);
     }
 
-    public void deleteBusiness(Long id) {
-        if(!businessRepository.existsById(id)) {
+    public void forceDeleteBusiness(Long id) {
+        if (!businessRepository.existsById(id))
             throw new RuntimeException("Business not found");
-        }
         businessRepository.deleteById(id);
     }
 
-        public BusinessResponse addTypeToBusiness(Long businessId, Long typeId) {
+    public BusinessResponse addTypeToBusiness(Long businessId, Long typeId) {
         Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new RuntimeException("Business not found"));
+            .orElseThrow(() -> new RuntimeException("Business not found"));
 
         BusinessType businessType = businessTypeRepository.findById(typeId)
-                .orElseThrow(() -> new RuntimeException("Business type not found"));
+            .orElseThrow(() -> new RuntimeException("Business type not found"));
 
         if (business.getBusinessTypes().contains(businessType))
             throw new RuntimeException("Business already has this type");
@@ -111,10 +109,10 @@ public class BusinessService {
 
     public BusinessResponse removeTypeFromBusiness(Long businessId, Long typeId) {
         Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new RuntimeException("Business not found"));
+            .orElseThrow(() -> new RuntimeException("Business not found"));
 
         BusinessType businessType = businessTypeRepository.findById(typeId)
-                .orElseThrow(() -> new RuntimeException("Business type not found"));
+            .orElseThrow(() -> new RuntimeException("Business type not found"));
 
         business.getBusinessTypes().remove(businessType);
         return BusinessMapper.toResponse(businessRepository.save(business));
