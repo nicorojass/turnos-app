@@ -1,6 +1,5 @@
 package com.grupo8.turnos_app.modules.business.entities;
 
-import jakarta.annotation.Generated;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
