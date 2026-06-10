@@ -4,6 +4,7 @@ import java.util.List;
 
 import org.springframework.stereotype.Service;
 
+import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.business.Business;
 import com.grupo8.turnos_app.modules.service.dto.ServRequest;
 import com.grupo8.turnos_app.modules.service.dto.ServResponse;
@@ -21,7 +22,7 @@ public class ServService {
     public ServResponse createService(ServRequest request){
 
         Business business = businessRepository.findById(request.getBusinessId())
-            .orElseThrow(() -> new RuntimeException("Business not found"));
+            .orElseThrow(() -> new NotFoundException("Business not found"));
 
         Serv service = ServMapper.toEntity(request);
         service.setBusiness(business);
@@ -39,7 +40,7 @@ public class ServService {
 
     public ServResponse editService(Long serviceId, ServRequest request) {
         Serv service = serviceRepository.findById(serviceId)
-            .orElseThrow(() -> new RuntimeException("Service not found"));
+            .orElseThrow(() -> new NotFoundException("Service not found"));
 
         service.setName(request.getName());
         service.setPrice(request.getPrice());
@@ -49,7 +50,7 @@ public class ServService {
 }
 
     public void deleteService(Long serviceId) {
-        Serv service = serviceRepository.findById(serviceId).orElseThrow(() -> new RuntimeException("Service not found"));
+        Serv service = serviceRepository.findById(serviceId).orElseThrow(() -> new NotFoundException("Service not found"));
         service.setDeleted(true);
         serviceRepository.save(service);
     }
