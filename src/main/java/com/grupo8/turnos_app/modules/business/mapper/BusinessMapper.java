@@ -1,5 +1,8 @@
 package com.grupo8.turnos_app.modules.business.mapper;
 
+import java.util.Collections;
+import java.util.stream.Collectors;
+
 import com.grupo8.turnos_app.modules.business.dto.BusinessRequest;
 import com.grupo8.turnos_app.modules.business.dto.BusinessResponse;
 import com.grupo8.turnos_app.modules.business.entities.Business;
@@ -18,7 +21,14 @@ public class BusinessMapper {
                 .scheduleEnd(business.getScheduleEnd())
                 .scheduleDaysToCreate(business.getScheduleDaysToCreate())
                 .scheduleAnticipation(business.getScheduleAnticipation())
+                .active(business.getActive())
                 .ownerId(business.getOwner().getId())
+                .businessTypes(
+                    business.getBusinessTypes() == null ? Collections.emptyList() :
+                    business.getBusinessTypes().stream()
+                        .map(BusinessTypeMapper::toResponse)
+                        .collect(Collectors.toList())
+                )
                 .build();
     }
 
@@ -35,6 +45,4 @@ public class BusinessMapper {
                 .scheduleAnticipation(request.getScheduleAnticipation())
                 .build();
     }
-
-
 }

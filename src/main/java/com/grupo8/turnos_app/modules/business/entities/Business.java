@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.business.entities;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -9,7 +10,8 @@ import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
-import jakarta.persistence.ManyToOne;
+import jakarta.persistence.JoinTable;
+import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
@@ -26,7 +28,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class Business {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -42,7 +44,7 @@ public class Business {
 
     @Column(nullable = false)
     private String phone;
-    
+
     private String description;
 
     private Boolean automaticSchedule;
@@ -63,4 +65,12 @@ public class Business {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
+
+    @ManyToMany
+    @JoinTable(
+        name = "business_business_types",
+        joinColumns = @JoinColumn(name = "business_id"),
+        inverseJoinColumns = @JoinColumn(name = "type_id")
+    )
+    private List<BusinessType> businessTypes;
 }
