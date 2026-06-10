@@ -11,6 +11,8 @@ import com.grupo8.turnos_app.modules.business.entities.BusinessType;
 import com.grupo8.turnos_app.modules.business.mapper.BusinessMapper;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessTypeRepository;
+import com.grupo8.turnos_app.modules.users.entities.User;
+import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
