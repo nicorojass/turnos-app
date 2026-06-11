@@ -1,4 +1,4 @@
-package com.grupo8.turnos_app.modules.service;
+package com.grupo8.turnos_app.modules.service.service;
 
 import java.util.List;
 
@@ -9,7 +9,9 @@ import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.service.dto.ServRequest;
 import com.grupo8.turnos_app.modules.service.dto.ServResponse;
+import com.grupo8.turnos_app.modules.service.entity.Serv;
 import com.grupo8.turnos_app.modules.service.mapper.ServMapper;
+import com.grupo8.turnos_app.modules.service.repository.ServRepository;
 
 import lombok.RequiredArgsConstructor;
 
