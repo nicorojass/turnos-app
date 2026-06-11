@@ -1,8 +1,8 @@
 package com.grupo8.turnos_app.modules.appointmentschedule.mapper;
 
-import com.grupo8.turnos_app.modules.appointmentschedule.AppointmentSchedule;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleRequest;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleResponse;
+import com.grupo8.turnos_app.modules.appointmentschedule.entity.AppointmentSchedule;
 
 public class AppointmentScheduleMapper {
 

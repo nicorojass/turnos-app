@@ -1,4 +1,4 @@
-package com.grupo8.turnos_app.modules.appointmentschedule;
+package com.grupo8.turnos_app.modules.appointmentschedule.entity;
 
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.service.Serv;
