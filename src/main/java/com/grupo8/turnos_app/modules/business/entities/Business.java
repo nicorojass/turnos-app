@@ -3,6 +3,8 @@ package com.grupo8.turnos_app.modules.business.entities;
 import java.time.LocalDateTime;
 import java.util.List;
 
+import com.grupo8.turnos_app.modules.users.entities.User;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;

@@ -12,10 +12,10 @@ import com.grupo8.turnos_app.modules.appointmentschedule.mapper.AppointmentSched
 import com.grupo8.turnos_app.modules.appointmentschedule.repository.AppointmentScheduleRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
-import com.grupo8.turnos_app.modules.service.Serv;
-import com.grupo8.turnos_app.modules.service.ServRepository;
-import com.grupo8.turnos_app.modules.user.User;
-import com.grupo8.turnos_app.modules.user.UserRepository;
+import com.grupo8.turnos_app.modules.service.entity.Serv;
+import com.grupo8.turnos_app.modules.service.repository.ServRepository;
+import com.grupo8.turnos_app.modules.users.entities.User;
+import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
 
 import lombok.RequiredArgsConstructor;
 
