@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.enums.DayOfWeek;
 import com.grupo8.turnos_app.modules.business.entities.Business;
+import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.day_schedule.dto.DayScheduleResponse;
 import com.grupo8.turnos_app.modules.day_schedule.dto.DayScheduleUpdateRequest;
@@ -20,7 +21,6 @@ import lombok.RequiredArgsConstructor;
 
 import com.grupo8.turnos_app.modules.day_schedule.exception.DayScheduleNotFoundException;
 import com.grupo8.turnos_app.modules.day_schedule.exception.InvalidScheduleTimeException;
-import com.grupo8.turnos_app.modules.day_schedule.exception.BusinessNotFoundException;
 
 @Service
 @RequiredArgsConstructor

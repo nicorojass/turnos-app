@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.business.dto;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
@@ -41,4 +42,5 @@ public class BusinessRequest {
     @NotNull(message = "Owner ID is required")
     private Long ownerId;
 
+    private List<Long> typeIds;
 }
