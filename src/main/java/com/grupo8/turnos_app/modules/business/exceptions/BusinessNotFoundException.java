@@ -1,4 +1,4 @@
-package com.grupo8.turnos_app.modules.day_schedule.exception;
+package com.grupo8.turnos_app.modules.business.exceptions;
 
 public class BusinessNotFoundException extends RuntimeException {
 
