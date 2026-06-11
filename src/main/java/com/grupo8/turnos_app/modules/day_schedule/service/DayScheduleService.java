@@ -47,6 +47,7 @@ public class DayScheduleService {
     dayScheduleRepository.saveAll(schedules);
   }
 
+  // get schedule by businessId
   public List<DayScheduleResponse> getScheduleByBusiness(Long businessId) {
     checkBusinessExists(businessId);
     return dayScheduleRepository.findAllByBusinessId(businessId)
@@ -55,7 +56,7 @@ public class DayScheduleService {
         .toList();
   }
 
-  // Replaces the full weekly schedule. Each item in the list is upserted by day.
+  // Replaces the full weekly schedule. Each item in the list is updated by day.
   // If a day is missing from the list it stays untouched in the DB.
   @Transactional
   public List<DayScheduleResponse> updateFullSchedule(Long businessId,
@@ -74,6 +75,7 @@ public class DayScheduleService {
         .orElseThrow(() -> new DayScheduleNotFoundException(
             "Schedule not found for day " + request.getDay()));
 
+    // new values.
     LocalTime effectiveStart = request.getDayStart() != null
         ? request.getDayStart()
         : daySchedule.getDayStart();
@@ -81,6 +83,7 @@ public class DayScheduleService {
         ? request.getDayEnd()
         : daySchedule.getDayEnd();
 
+    // check to avoid time mismatching (ej. start 22hs ; end 14hs)
     if (effectiveStart != null && effectiveEnd != null && !effectiveEnd.isAfter(effectiveStart)) {
       throw new InvalidScheduleTimeException("End time must be after start time for day " + request.getDay());
     }
@@ -97,7 +100,7 @@ public class DayScheduleService {
   }
 
   // Helper
-  
+
   // throws if the business does not exist. used to validate existence before any
   // operation.
   private void checkBusinessExists(Long businessId) {
