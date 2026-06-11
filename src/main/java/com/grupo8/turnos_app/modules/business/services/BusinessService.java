@@ -8,6 +8,7 @@ import com.grupo8.turnos_app.modules.business.dto.BusinessRequest;
 import com.grupo8.turnos_app.modules.business.dto.BusinessResponse;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.entities.BusinessType;
+import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.mapper.BusinessMapper;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessTypeRepository;
@@ -32,7 +33,11 @@ public class BusinessService {
             throw new RuntimeException("A business with that phone already exists");
 
         User owner = userRepository.findById(request.getOwnerId())
+<<<<<<< Updated upstream
             .orElseThrow(() -> new RuntimeException("Owner not found"));
+=======
+                .orElseThrow(() -> new BusinessNotFoundException("Owner not found"));
+>>>>>>> Stashed changes
 
         Business business = BusinessMapper.toEntity(request);
         business.setOwner(owner);
@@ -42,8 +47,13 @@ public class BusinessService {
 
     public BusinessResponse getBusinessById(Long id) {
         return businessRepository.findById(id)
+<<<<<<< Updated upstream
             .map(BusinessMapper::toResponse)
             .orElseThrow(() -> new RuntimeException("Business not found"));
+=======
+                .map(BusinessMapper::toResponse)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+>>>>>>> Stashed changes
     }
 
     public List<BusinessResponse> getAllBusinesses() {
@@ -55,16 +65,28 @@ public class BusinessService {
 
     public BusinessResponse getBusinessBySlug(String slug) {
         return businessRepository.findBySlug(slug)
+<<<<<<< Updated upstream
             .map(BusinessMapper::toResponse)
             .orElseThrow(() -> new RuntimeException("Business not found"));
+=======
+                .map(BusinessMapper::toResponse)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+>>>>>>> Stashed changes
     }
 
     public BusinessResponse updateBusiness(Long id, BusinessRequest request) {
         Business business = businessRepository.findById(id)
+<<<<<<< Updated upstream
             .orElseThrow(() -> new RuntimeException("Business not found"));
 
         User owner = userRepository.findById(request.getOwnerId())
             .orElseThrow(() -> new RuntimeException("Owner not found"));
+=======
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+
+        User owner = userRepository.findById(request.getOwnerId())
+                .orElseThrow(() -> new BusinessNotFoundException("Owner not found"));
+>>>>>>> Stashed changes
 
         business.setName(request.getName());
         business.setEmail(request.getEmail());
@@ -82,20 +104,28 @@ public class BusinessService {
 
     public void deleteBusiness(Long id) {
         Business business = businessRepository.findById(id)
+<<<<<<< Updated upstream
             .orElseThrow(() -> new RuntimeException("Business not found"));
+=======
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+>>>>>>> Stashed changes
         business.setActive(false);
         businessRepository.save(business);
     }
 
     public void forceDeleteBusiness(Long id) {
         if (!businessRepository.existsById(id))
-            throw new RuntimeException("Business not found");
+            throw new BusinessNotFoundException("Business not found");
         businessRepository.deleteById(id);
     }
 
     public BusinessResponse addTypeToBusiness(Long businessId, Long typeId) {
         Business business = businessRepository.findById(businessId)
+<<<<<<< Updated upstream
             .orElseThrow(() -> new RuntimeException("Business not found"));
+=======
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+>>>>>>> Stashed changes
 
         BusinessType businessType = businessTypeRepository.findById(typeId)
             .orElseThrow(() -> new RuntimeException("Business type not found"));
