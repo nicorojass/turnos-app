@@ -8,7 +8,9 @@ import org.springframework.stereotype.Service;
 import com.grupo8.turnos_app.auth.dto.AuthResponse;
 import com.grupo8.turnos_app.auth.dto.LoginRequest;
 import com.grupo8.turnos_app.auth.dto.RegisterRequest;
+import com.grupo8.turnos_app.modules.users.dto.UserResponse;
 import com.grupo8.turnos_app.modules.users.entities.User;
+import com.grupo8.turnos_app.modules.users.mapper.UserMapper;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
 
 import lombok.RequiredArgsConstructor;
@@ -48,4 +50,10 @@ public class AuthService {
         String token = jwtService.generateToken(user);
         return AuthResponse.builder().token(token).build();
     }
+
+    public UserResponse getMe(String email) {
+        User user = userRepository.findByEmail(email)
+            .orElseThrow(() -> new RuntimeException("User not found"));
+        return UserMapper.toResponse(user);
+}
 }
