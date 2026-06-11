@@ -1,6 +1,9 @@
 package com.grupo8.turnos_app.modules.users.dto;
 
 import java.time.LocalDateTime;
+import java.util.Set;
+
+import com.grupo8.turnos_app.common.enums.RoleName;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,4 +22,5 @@ public class UserResponse {
     private String email;
     private LocalDateTime createdAt;
     private Boolean active;
+    private Set<RoleName> roles;
 }
