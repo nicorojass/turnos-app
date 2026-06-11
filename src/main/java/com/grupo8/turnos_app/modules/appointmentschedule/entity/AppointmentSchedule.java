@@ -1,8 +1,8 @@
 package com.grupo8.turnos_app.modules.appointmentschedule.entity;
 
 import com.grupo8.turnos_app.modules.business.entities.Business;
-import com.grupo8.turnos_app.modules.service.Serv;
-import com.grupo8.turnos_app.modules.user.User;
+import com.grupo8.turnos_app.modules.service.entity.Serv;
+import com.grupo8.turnos_app.modules.users.entities.User;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
