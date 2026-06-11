@@ -1,8 +1,8 @@
 package com.grupo8.turnos_app.modules.service.mapper;
 
-import com.grupo8.turnos_app.modules.service.Serv;
 import com.grupo8.turnos_app.modules.service.dto.ServRequest;
 import com.grupo8.turnos_app.modules.service.dto.ServResponse;
+import com.grupo8.turnos_app.modules.service.entity.Serv;
 
 
 public class ServMapper {

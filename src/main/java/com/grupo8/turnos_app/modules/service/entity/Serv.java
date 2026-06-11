@@ -1,4 +1,4 @@
-package com.grupo8.turnos_app.modules.service;
+package com.grupo8.turnos_app.modules.service.entity;
 
 import java.math.BigDecimal;
 

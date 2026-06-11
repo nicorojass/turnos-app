@@ -1,4 +1,4 @@
-package com.grupo8.turnos_app.modules.service;
+package com.grupo8.turnos_app.modules.service.controller;
 
 import java.util.List;
 
@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.grupo8.turnos_app.modules.service.dto.ServRequest;
 import com.grupo8.turnos_app.modules.service.dto.ServResponse;
+import com.grupo8.turnos_app.modules.service.service.ServService;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
