@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.business.entities;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
 import com.grupo8.turnos_app.modules.users.entities.User;
@@ -75,4 +76,13 @@ public class Business {
         inverseJoinColumns = @JoinColumn(name = "type_id")
     )
     private List<BusinessType> businessTypes;
+
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+        name = "business_employees",
+        joinColumns = @JoinColumn(name = "business_id"),
+        inverseJoinColumns = @JoinColumn(name = "user_id")
+    )
+    @Builder.Default
+    private List<User> employees = new ArrayList<>();
 }

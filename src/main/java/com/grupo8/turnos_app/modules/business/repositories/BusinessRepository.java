@@ -1,5 +1,6 @@
 package com.grupo8.turnos_app.modules.business.repositories;
 
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -14,4 +15,5 @@ public interface BusinessRepository extends JpaRepository<Business, Long> {
     boolean existsByPhone(String phone);
     Optional<Business> findBySlug(String slug);
     Optional<Business> findByOwner_Id(Long ownerId);
+    List<Business> findByEmployees_Id(Long userId);
 }
