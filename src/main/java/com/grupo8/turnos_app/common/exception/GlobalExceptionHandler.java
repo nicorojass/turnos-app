@@ -69,5 +69,9 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(500, "Internal server error"));
     }
 
-
+    @ExceptionHandler(EmailAlreadyInUseException.class)
+    public ResponseEntity<ErrorResponse> handleEmailInUse(EmailAlreadyInUseException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(new ErrorResponse(409, ex.getMessage()));
+}
 }

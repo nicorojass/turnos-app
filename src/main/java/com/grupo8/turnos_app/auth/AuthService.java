@@ -9,6 +9,8 @@ import com.grupo8.turnos_app.auth.dto.AuthResponse;
 import com.grupo8.turnos_app.auth.dto.LoginRequest;
 import com.grupo8.turnos_app.auth.dto.RegisterRequest;
 import com.grupo8.turnos_app.common.enums.RoleName;
+import com.grupo8.turnos_app.common.exception.EmailAlreadyInUseException;
+import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.role.entity.Role;
 import com.grupo8.turnos_app.modules.role.repository.RoleRepository;
 import com.grupo8.turnos_app.modules.users.dto.UserResponse;
@@ -30,10 +32,10 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmail(request.getEmail()))
-            throw new RuntimeException("Email already in use");
+            throw new EmailAlreadyInUseException("Email already in use");
 
         Role ownerRole = roleRepository.findByName(RoleName.OWNER)
-                .orElseThrow(() -> new RuntimeException("Role OWNER not found"));
+                .orElseThrow(() -> new NotFoundException("Role OWNER not found"));
 
         User user = User.builder()
                 .name(request.getName())
@@ -54,7 +56,7 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         String token = jwtService.generateToken(user);
         return AuthResponse.builder().token(token).build();
@@ -62,7 +64,7 @@ public class AuthService {
 
     public UserResponse getMe(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
         return UserMapper.toResponse(user);
     }
 }
