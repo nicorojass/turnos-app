@@ -1,9 +1,7 @@
 package com.grupo8.turnos_app.modules.appointmentschedule.dto;
 
-import java.math.BigDecimal;
 import java.time.LocalTime;
 
-import jakarta.validation.constraints.DecimalMin;
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
@@ -30,10 +28,6 @@ public class AppointmentScheduleRequest {
 
     @NotNull(message = "End time is required")
     private LocalTime endTime;
-
-    @NotNull(message = "Price is required")
-    @DecimalMin(value = "0.01", message = "Price must be a positive number")
-    private BigDecimal price;
 
     @NotNull(message = "Service ID is required")
     private Long serviceId;

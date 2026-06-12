@@ -48,13 +48,15 @@ public class AppointmentScheduleService {
             employee = userRepository.findById(request.getEmployeeId())
                     .orElseThrow(() -> new NotFoundException("Employee not found"));
         }
-        
-        if (appointmentScheduleRepository.existsByBusinessIdAndDayNumberAndStartTimeAndEndTime(
-                businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime())) {
-        throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day and time range");
-        }
+
+        if (appointmentScheduleRepository.existsConflictingSchedule(
+        businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime(),
+        request.getEmployeeId(), null)) {
+                throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day, time and employee");
+}
 
         AppointmentSchedule schedule = AppointmentScheduleMapper.toEntity(request);
+        schedule.setPrice(service.getPrice());
         schedule.setBusiness(business);
         schedule.setService(service);
         schedule.setEmployee(employee);
@@ -81,14 +83,15 @@ public class AppointmentScheduleService {
                 .orElseThrow(() -> new NotFoundException("Employee not found"));
     }
 
-    if (appointmentScheduleRepository.existsByBusinessIdAndDayNumberAndStartTimeAndEndTimeAndIdNot(
-        businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime(), id)) {
-    throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day and time range");
+    if (appointmentScheduleRepository.existsConflictingSchedule(
+        businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime(),
+        request.getEmployeeId(), id)) {
+    throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day, time and employee");
         }
     schedule.setDayNumber(request.getDayNumber());
     schedule.setStartTime(request.getStartTime());
     schedule.setEndTime(request.getEndTime());
-    schedule.setPrice(request.getPrice());
+    schedule.setPrice(service.getPrice());
     schedule.setService(service);
     schedule.setEmployee(employee);
 

@@ -25,7 +25,6 @@ public class AppointmentScheduleMapper {
                 .dayNumber(request.getDayNumber())
                 .startTime(request.getStartTime())
                 .endTime(request.getEndTime())
-                .price(request.getPrice())
                 .build();
     }
 }

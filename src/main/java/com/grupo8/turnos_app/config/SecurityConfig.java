@@ -66,6 +66,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses").hasRole("ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{id}").hasRole("ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/v1/admin/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.POST, "/api/v1/business-types").hasRole("ADMIN")
             .requestMatchers(HttpMethod.PUT, "/api/v1/business-types/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/api/v1/business-types/**").hasRole("ADMIN")
@@ -78,61 +79,25 @@ public class SecurityConfig {
             .requestMatchers("/swagger-ui/**").permitAll()
             .requestMatchers("/swagger-ui.html").permitAll()
             .requestMatchers("/v3/api-docs/**").permitAll()
-            // appointment
-            // public appointment endpoints
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/employees").hasRole("OWNER")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/employees").hasRole("OWNER")
+            .requestMatchers(HttpMethod.GET, "/api/v1/employees/{id}").hasRole("OWNER")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/employees/{id}").hasRole("OWNER")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/employees/{id}").hasRole("OWNER")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/public").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/book").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/pay-deposit").permitAll()
-            // cancel (any user)
             .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/cancel").authenticated()
-            // suspend and delete (owner)
             .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/suspend").hasRole("OWNER")
             .requestMatchers(HttpMethod.DELETE, "/api/v1/appointments/*").hasRole("OWNER")
-            // all and today's appointments (owner)
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/today").hasRole("OWNER")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments").hasRole("OWNER")
-            // get appointments (any user)
             .requestMatchers(HttpMethod.GET, "/api/v1/users/me/appointments").authenticated()
-            .anyRequest().authenticated())
+            .anyRequest().authenticated()
+        )
         .authenticationProvider(authenticationProvider())
         .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
-    @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
-        http
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
-                .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/businesses/slug/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/business-types").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{id}/appointments/public").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/businesses").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{id}").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/api/v1/admin/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/admin/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/v1/business-types").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/api/v1/business-types/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/business-types/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/api/v1/businesses").hasRole("OWNER")
-                .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{id}").hasRole("OWNER")
-                .requestMatchers(HttpMethod.GET, "/api/v1/businesses/mine").hasRole("OWNER")
-                .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{id}").hasRole("OWNER")
-                .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{id}/types/**").hasRole("OWNER")
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{id}/types/**").hasRole("OWNER")
-                .requestMatchers("/swagger-ui/**").permitAll()
-                .requestMatchers("/swagger-ui.html").permitAll()
-                .requestMatchers("/v3/api-docs/**").permitAll()
-                .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/employees").hasRole("OWNER")
-                .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/employees").hasRole("OWNER")
-                .requestMatchers(HttpMethod.GET, "/api/v1/employees/{id}").hasRole("OWNER")
-                .requestMatchers(HttpMethod.PUT, "/api/v1/employees/{id}").hasRole("OWNER")
-                .requestMatchers(HttpMethod.DELETE, "/api/v1/employees/{id}").hasRole("OWNER")
-                .anyRequest().authenticated()
-            )
-            .authenticationProvider(authenticationProvider())
-            .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
     return http.build();
-  }
+}
 }

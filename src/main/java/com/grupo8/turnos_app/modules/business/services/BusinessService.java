@@ -16,9 +16,9 @@ import com.grupo8.turnos_app.modules.business.exceptions.OwnerNotFoundException;
 import com.grupo8.turnos_app.modules.business.mapper.BusinessMapper;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessTypeRepository;
+import com.grupo8.turnos_app.modules.day_schedule.service.DayScheduleService;
 import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
-import com.grupo8.turnos_app.modules.day_schedule.service.DayScheduleService;
 
 import lombok.RequiredArgsConstructor;
 
@@ -83,9 +83,6 @@ public class BusinessService {
         Business business = businessRepository.findById(id)
             .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
 
-        User owner = userRepository.findById(request.getOwnerId())
-            .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
-
         business.setName(request.getName());
         business.setEmail(request.getEmail());
         business.setSlug(request.getSlug());
@@ -95,7 +92,7 @@ public class BusinessService {
         business.setScheduleEnd(request.getScheduleEnd());
         business.setScheduleDaysToCreate(request.getScheduleDaysToCreate());
         business.setScheduleAnticipation(request.getScheduleAnticipation());
-        business.setOwner(owner);
+        
 
         if (request.getTypeIds() != null) {
         List<BusinessType> types = businessTypeRepository.findAllById(request.getTypeIds());

@@ -5,7 +5,6 @@ import java.util.List;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -30,7 +29,7 @@ public class BusinessRequest {
     private String slug;
     
     @NotBlank(message = "Phone is required")
-    @Pattern(regexp = "^[0-9+\\-\\s]{6,20}$", message = "Phone format is invalid")
+    @Pattern(regexp = "^\\+[0-9]{6,20}$", message = "Phone format must start with + followed by digits")
     private String phone;
     
     private String description;
@@ -43,8 +42,5 @@ public class BusinessRequest {
     
     private Integer scheduleAnticipation;
     
-    @NotNull(message = "Owner ID is required")
-    private Long ownerId;
-
     private List<Long> typeIds;
 }
