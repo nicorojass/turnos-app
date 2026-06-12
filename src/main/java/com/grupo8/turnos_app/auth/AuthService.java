@@ -70,10 +70,10 @@ public class AuthService {
 
     public AuthResponse registerClient(RegisterRequest request) {
     if (userRepository.existsByEmail(request.getEmail()))
-        throw new RuntimeException("Email already in use");
+        throw new EmailAlreadyInUseException("Email already in use");
 
     Role clientRole = roleRepository.findByName(RoleName.CLIENT)
-            .orElseThrow(() -> new RuntimeException("Role CLIENT not found"));
+            .orElseThrow(() -> new NotFoundException("Role CLIENT not found"));
 
     User user = User.builder()
             .name(request.getName())
