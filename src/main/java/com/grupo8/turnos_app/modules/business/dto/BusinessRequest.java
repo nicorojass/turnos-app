@@ -29,7 +29,7 @@ public class BusinessRequest {
     private String slug;
     
     @NotBlank(message = "Phone is required")
-    @Pattern(regexp = "^[0-9+\\-\\s]{6,20}$", message = "Phone format is invalid")
+    @Pattern(regexp = "^\\+[0-9]{6,20}$", message = "Phone format must start with + followed by digits")
     private String phone;
     
     private String description;
