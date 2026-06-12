@@ -67,4 +67,24 @@ public class AuthService {
                 .orElseThrow(() -> new NotFoundException("User not found"));
         return UserMapper.toResponse(user);
     }
+
+    public AuthResponse registerClient(RegisterRequest request) {
+    if (userRepository.existsByEmail(request.getEmail()))
+        throw new EmailAlreadyInUseException("Email already in use");
+
+    Role clientRole = roleRepository.findByName(RoleName.CLIENT)
+            .orElseThrow(() -> new NotFoundException("Role CLIENT not found"));
+
+    User user = User.builder()
+            .name(request.getName())
+            .email(request.getEmail())
+            .password(passwordEncoder.encode(request.getPassword()))
+            .build();
+
+    user.getRoles().add(clientRole);
+    userRepository.save(user);
+
+    String token = jwtService.generateToken(user);
+    return AuthResponse.builder().token(token).build();
+}
 }
