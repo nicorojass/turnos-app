@@ -31,31 +31,34 @@ public class BusinessService {
     private final BusinessTypeRepository businessTypeRepository;
     private final DayScheduleService dayScheduleService;
 
-    public BusinessResponse createBusiness(BusinessRequest request) {
+    public BusinessResponse createBusiness(String ownerEmail, BusinessRequest request) {
 
-        if (businessRepository.existsByEmail(request.getEmail()))
-            throw new BusinessAlreadyExistsException("A business with that email already exists");
-        if (businessRepository.existsBySlug(request.getSlug()))
-            throw new BusinessAlreadyExistsException("A business with that slug already exists");
-        if (businessRepository.existsByPhone(request.getPhone()))
-            throw new BusinessAlreadyExistsException("A business with that phone already exists");
+    if (businessRepository.existsByEmail(request.getEmail()))
+        throw new BusinessAlreadyExistsException("A business with that email already exists");
+    if (businessRepository.existsBySlug(request.getSlug()))
+        throw new BusinessAlreadyExistsException("A business with that slug already exists");
+    if (businessRepository.existsByPhone(request.getPhone()))
+        throw new BusinessAlreadyExistsException("A business with that phone already exists");
 
-        User owner = userRepository.findById(request.getOwnerId())
-                .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
+    User owner = userRepository.findByEmail(ownerEmail)
+            .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
 
-        Business business = BusinessMapper.toEntity(request);
-        business.setOwner(owner);
+    if (businessRepository.findByOwnerId(owner.getId()).isPresent())
+        throw new BusinessAlreadyExistsException("This owner already has a business");
 
-        if (request.getTypeIds() != null && !request.getTypeIds().isEmpty()) {
+    Business business = BusinessMapper.toEntity(request);
+    business.setOwner(owner);
+
+    if (request.getTypeIds() != null && !request.getTypeIds().isEmpty()) {
         List<BusinessType> types = businessTypeRepository.findAllById(request.getTypeIds());
         business.setBusinessTypes(types);
     }
 
-        Business savedBusiness = businessRepository.save(business);
-        dayScheduleService.initializeScheduleForBusiness(savedBusiness);
+    Business savedBusiness = businessRepository.save(business);
+    dayScheduleService.initializeScheduleForBusiness(savedBusiness);
 
-        return BusinessMapper.toResponse(savedBusiness);
-    }
+    return BusinessMapper.toResponse(savedBusiness);
+}
 
     public BusinessResponse getBusinessById(Long id) {
         return businessRepository.findById(id)
@@ -139,5 +142,13 @@ public class BusinessService {
         business.getBusinessTypes().remove(businessType);
         return BusinessMapper.toResponse(businessRepository.save(business));
     }
+
+    public BusinessResponse getMyBusiness(String email) {
+        User owner = userRepository.findByEmail(email)
+            .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
+        return businessRepository.findByOwner_Id(owner.getId())
+            .map(BusinessMapper::toResponse)
+            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+}
 
 }

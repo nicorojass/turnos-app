@@ -16,6 +16,10 @@ import com.grupo8.turnos_app.modules.business.dto.BusinessRequest;
 import com.grupo8.turnos_app.modules.business.dto.BusinessResponse;
 import com.grupo8.turnos_app.modules.business.services.BusinessService;
 
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
+
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -26,10 +30,14 @@ public class BusinessController {
     
     private final BusinessService businessService;
 
+
     @PostMapping
-    public ResponseEntity<BusinessResponse> createBusiness(@RequestBody @Valid BusinessRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(businessService.createBusiness(request));
-    }
+    public ResponseEntity<BusinessResponse> createBusiness(
+        Authentication authentication,
+        @Valid @RequestBody BusinessRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+        .body(businessService.createBusiness(authentication.getName(), request));
+}
 
     @GetMapping("/{id}")
     public ResponseEntity<BusinessResponse> getBusiness(@PathVariable Long id) {
@@ -45,6 +53,11 @@ public class BusinessController {
     public ResponseEntity<BusinessResponse> getBusinessBySlug(@PathVariable String slug) {
         return ResponseEntity.ok(businessService.getBusinessBySlug(slug));
     }
+
+    @GetMapping("/mine")
+    public ResponseEntity<BusinessResponse> getMyBusiness(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(businessService.getMyBusiness(userDetails.getUsername()));
+}
 
     @PutMapping("/{id}")
     public ResponseEntity<BusinessResponse> updateBusiness(@PathVariable Long id, @RequestBody @Valid BusinessRequest request) {
