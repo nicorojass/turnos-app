@@ -41,8 +41,7 @@ public class UserController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> toggleUserActive(@PathVariable Long id) {
-        userService.toggleUserActive(id);
-        return ResponseEntity.noContent().build();
-    }
+    public ResponseEntity<UserResponse> toggleUserActive(@PathVariable Long id) {
+        return ResponseEntity.ok(userService.toggleUserActive(id));
+}
 }
