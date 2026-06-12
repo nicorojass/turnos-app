@@ -19,6 +19,8 @@ import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundExcepti
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessTypeAlreadyAssignedException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessTypeNotFoundException;
 import com.grupo8.turnos_app.modules.business.exceptions.OwnerNotFoundException;
+import com.grupo8.turnos_app.modules.day_schedule.exception.DayScheduleNotFoundException;
+import com.grupo8.turnos_app.modules.day_schedule.exception.InvalidScheduleTimeException;
 import com.grupo8.turnos_app.modules.service.exception.ServiceAlreadyExistsException;
 
 @RestControllerAdvice
@@ -51,6 +53,13 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(400, ex.getMessage()));
     }
+
+    @ExceptionHandler(InvalidScheduleTimeException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidScheduleTime(InvalidScheduleTimeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, ex.getMessage()));
+    }
+
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -61,6 +70,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleForbidden(ForbiddenOperationException ex) {
         return ResponseEntity.status(HttpStatus.FORBIDDEN)
             .body(new ErrorResponse(403, ex.getMessage()));
+    }
+
+    @ExceptionHandler(DayScheduleNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleDayScheduleNotFound(DayScheduleNotFoundException ex) {
+        return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                .body(new ErrorResponse(404, ex.getMessage()));
     }
 
     @ExceptionHandler(BusinessNotFoundException.class)
