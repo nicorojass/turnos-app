@@ -93,6 +93,8 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/today").hasRole("OWNER")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments").hasRole("OWNER")
             .requestMatchers(HttpMethod.GET, "/api/v1/users/me/appointments").authenticated()
+            .requestMatchers(HttpMethod.POST, "/api/v1/auth/register/client").permitAll()
+            .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/**").hasRole("ADMIN")
             .anyRequest().authenticated()
         )
         .authenticationProvider(authenticationProvider())
