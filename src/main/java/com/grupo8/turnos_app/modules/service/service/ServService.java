@@ -48,15 +48,23 @@ public class ServService {
     }
 
     public ServResponse editService(Long serviceId, ServRequest request) {
-        Serv service = serviceRepository.findById(serviceId)
-            .orElseThrow(() -> new NotFoundException("Service not found"));
+    Serv service = serviceRepository.findById(serviceId)
+        .orElseThrow(() -> new NotFoundException("Service not found"));
 
-        service.setName(request.getName());
-        service.setPrice(request.getPrice());
-        service.setDurationMinutes(request.getDurationMinutes());
+    if (serviceRepository.existsByBusinessIdAndNameAndDurationMinutesAndPriceAndDepositPorcentage(
+            service.getBusiness().getId(), request.getName(), request.getDurationMinutes(),
+            request.getPrice(), request.getDepositPorcentage())) {
+        throw new ServiceAlreadyExistsException("An identical service already exists for this business");
+    }
 
-        return ServMapper.toResponse(serviceRepository.save(service));
+    service.setName(request.getName());
+    service.setPrice(request.getPrice());
+    service.setDurationMinutes(request.getDurationMinutes());
+    service.setDepositPorcentage(request.getDepositPorcentage());
+
+    return ServMapper.toResponse(serviceRepository.save(service));
 }
+
 
     public void deleteService(Long serviceId) {
         Serv service = serviceRepository.findById(serviceId).orElseThrow(() -> new NotFoundException("Service not found"));
