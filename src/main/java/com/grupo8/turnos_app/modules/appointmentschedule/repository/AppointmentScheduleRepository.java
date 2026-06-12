@@ -12,12 +12,12 @@ import com.grupo8.turnos_app.modules.appointmentschedule.entity.AppointmentSched
 
 public interface AppointmentScheduleRepository extends JpaRepository<AppointmentSchedule, Long> {
     List<AppointmentSchedule> findByBusinessId(Long businessId);
-    @Query("""
+  @Query("""
     SELECT COUNT(a) > 0 FROM AppointmentSchedule a
     WHERE a.business.id = :businessId
     AND a.dayNumber = :dayNumber
-    AND a.startTime = :startTime
-    AND a.endTime = :endTime
+    AND a.startTime < :endTime
+    AND a.endTime > :startTime
     AND (
         (:employeeId IS NULL AND a.employee IS NULL)
         OR (a.employee.id = :employeeId)
@@ -32,4 +32,6 @@ boolean existsConflictingSchedule(
     @Param("employeeId") Long employeeId,
     @Param("excludeId") Long excludeId
 );
+
+
 }

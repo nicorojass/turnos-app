@@ -1,5 +1,6 @@
 package com.grupo8.turnos_app.modules.appointmentschedule.service;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.springframework.stereotype.Service;
@@ -9,6 +10,7 @@ import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentSchedule
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleResponse;
 import com.grupo8.turnos_app.modules.appointmentschedule.entity.AppointmentSchedule;
 import com.grupo8.turnos_app.modules.appointmentschedule.exception.AppointmentScheduleAlreadyExistsException;
+import com.grupo8.turnos_app.modules.appointmentschedule.exception.InvalidScheduleRangeException;
 import com.grupo8.turnos_app.modules.appointmentschedule.mapper.AppointmentScheduleMapper;
 import com.grupo8.turnos_app.modules.appointmentschedule.repository.AppointmentScheduleRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
@@ -43,6 +45,10 @@ public class AppointmentScheduleService {
         Serv service = servRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new NotFoundException("Service not found"));
 
+        long scheduleMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
+        if (scheduleMinutes < service.getDurationMinutes()) {
+        throw new InvalidScheduleRangeException("The time range must be at least as long as the service duration");
+}
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findById(request.getEmployeeId())
