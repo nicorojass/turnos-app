@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import com.grupo8.turnos_app.modules.business.dto.BusinessTypeRequest;
 import com.grupo8.turnos_app.modules.business.dto.BusinessTypeResponse;
 import com.grupo8.turnos_app.modules.business.entities.BusinessType;
+import com.grupo8.turnos_app.modules.business.exceptions.BusinessAlreadyExistsException;
+import com.grupo8.turnos_app.modules.business.exceptions.BusinessTypeNotFoundException;
 import com.grupo8.turnos_app.modules.business.mapper.BusinessTypeMapper;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessTypeRepository;
 
@@ -20,7 +22,7 @@ public class BusinessTypeService {
 
     public BusinessTypeResponse createBusinessType(BusinessTypeRequest request) {
         if (businessTypeRepository.existsByName(request.getName()))
-            throw new RuntimeException("A business type with that name already exists");
+            throw new BusinessAlreadyExistsException("A business type with that name already exists");
 
         BusinessType businessType = BusinessTypeMapper.toEntity(request);
         return BusinessTypeMapper.toResponse(businessTypeRepository.save(businessType));
@@ -35,7 +37,7 @@ public class BusinessTypeService {
 
     public BusinessTypeResponse updateBusinessType(Long id, BusinessTypeRequest request) {
         BusinessType businessType = businessTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Business type not found"));
+                .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
 
         businessType.setName(request.getName());
         return BusinessTypeMapper.toResponse(businessTypeRepository.save(businessType));
@@ -43,7 +45,7 @@ public class BusinessTypeService {
 
     public void toggleBusinessTypeActive(Long id) {
         BusinessType businessType = businessTypeRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Business type not found"));
+                .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
 
         businessType.setActive(!businessType.getActive());
         businessTypeRepository.save(businessType);
