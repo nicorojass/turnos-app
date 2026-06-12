@@ -27,31 +27,75 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final UserRepository userRepository;
+  private final UserRepository userRepository;
 
-    @Bean
-    public UserDetailsService userDetailsService() {
-        return username -> userRepository.findByEmail(username)
-                .orElseThrow(() -> new UsernameNotFoundException("User not found"));
-    }
+  @Bean
+  public UserDetailsService userDetailsService() {
+    return username -> userRepository.findByEmail(username)
+        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+  }
 
-    @Bean
-    public AuthenticationProvider authenticationProvider() {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService());
-        provider.setPasswordEncoder(passwordEncoder());
-        return provider;
-    }
+  @Bean
+  public AuthenticationProvider authenticationProvider() {
+    DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService());
+    provider.setPasswordEncoder(passwordEncoder());
+    return provider;
+  }
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
-        return config.getAuthenticationManager();
-    }
+  @Bean
+  public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
+    return config.getAuthenticationManager();
+  }
 
-    @Bean
-    public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
-    }
+  @Bean
+  public PasswordEncoder passwordEncoder() {
+    return new BCryptPasswordEncoder();
+  }
 
+  @Bean
+  public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
+    http
+        .csrf(csrf -> csrf.disable())
+        .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        .authorizeHttpRequests(auth -> auth
+            .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/slug/**").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/v1/business-types").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{id}/appointments/public").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{id}").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/admin/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/v1/business-types").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/business-types/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/business-types/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses").hasRole("OWNER")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{id}").hasRole("OWNER")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/mine").hasRole("OWNER")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{id}").hasRole("OWNER")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{id}/types/**").hasRole("OWNER")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{id}/types/**").hasRole("OWNER")
+            .requestMatchers("/swagger-ui/**").permitAll()
+            .requestMatchers("/swagger-ui.html").permitAll()
+            .requestMatchers("/v3/api-docs/**").permitAll()
+            // appointment
+            // public appointment endpoints
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/public").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/book").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/pay-deposit").permitAll()
+            // cancel (any user)
+            .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/cancel").authenticated()
+            // suspend and delete (owner)
+            .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/suspend").hasRole("OWNER")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/appointments/*").hasRole("OWNER")
+            // all and today's appointments (owner)
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/today").hasRole("OWNER")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments").hasRole("OWNER")
+            // get appointments (any user)
+            .requestMatchers(HttpMethod.GET, "/api/v1/users/me/appointments").authenticated()
+            .anyRequest().authenticated())
+        .authenticationProvider(authenticationProvider())
+        .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
         http
@@ -89,6 +133,6 @@ public class SecurityConfig {
             .authenticationProvider(authenticationProvider())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
 
-        return http.build();
-    }
+    return http.build();
+  }
 }
