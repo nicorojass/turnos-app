@@ -11,6 +11,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.modules.appointment.entity.Appointment;
 
@@ -52,4 +53,14 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
 
   // get all appointments by client as registered user
   List<Appointment> findByClientUserIdOrderByStartDatetimeDesc(Long clientUserId);
+
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.service.id = :serviceId " +
+    "AND ((:employeeId IS NULL AND a.employee IS NULL) OR a.employee.id = :employeeId) " +
+    "AND a.startDatetime = :startDatetime")
+boolean existsSlot(
+    @Param("businessId") Long businessId,
+    @Param("serviceId") Long serviceId,
+    @Param("employeeId") Long employeeId,
+    @Param("startDatetime") LocalDateTime startDatetime);
 }
