@@ -39,7 +39,4 @@ public class ServRequest {
     @DecimalMax(value = "100.00", message = "Deposit percentage cannot exceed 100")
     @NotNull(message = "Deposit percentage is required")
     private BigDecimal depositPorcentage;
-    
-    @NotNull(message = "Business ID is required")
-    private Long businessId;
 }
