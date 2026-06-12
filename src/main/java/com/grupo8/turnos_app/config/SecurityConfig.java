@@ -103,6 +103,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.GET, "/api/v1/users/me/appointments").authenticated()
             .requestMatchers(HttpMethod.POST, "/api/v1/auth/register/client").permitAll()
             .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/**").hasRole("ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/*/appointment-schedules/generate").hasRole("OWNER")
             .anyRequest().authenticated()
         )
         .authenticationProvider(authenticationProvider())
