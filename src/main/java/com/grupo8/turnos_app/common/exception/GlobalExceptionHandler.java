@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentNotAvailableException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusException;
 import com.grupo8.turnos_app.modules.appointmentschedule.exception.AppointmentScheduleAlreadyExistsException;
+import com.grupo8.turnos_app.modules.appointmentschedule.exception.InvalidScheduleRangeException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessAlreadyExistsException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessTypeAlreadyAssignedException;
@@ -39,6 +40,17 @@ public class GlobalExceptionHandler {
             .body(new ErrorResponse(400, "Malformed request body or invalid field format"));
     }
     
+     @ExceptionHandler(InvalidStatusException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidStatus(InvalidStatusException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, ex.getMessage()));
+    }
+
+     @ExceptionHandler(InvalidScheduleRangeException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidScheduleRangeException(InvalidScheduleRangeException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, ex.getMessage()));
+    }
     @ExceptionHandler(BadCredentialsException.class)
     public ResponseEntity<ErrorResponse> handleBadCredentials(BadCredentialsException ex) {
         return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
@@ -111,17 +123,12 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(500, "Internal server error"));
     }
 
-    // appointment exceptions
     @ExceptionHandler(AppointmentNotAvailableException.class)
     public ResponseEntity<ErrorResponse> handleAppointmentNotAvailable(AppointmentNotAvailableException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(409, ex.getMessage()));
     }
 
-    @ExceptionHandler(InvalidStatusException.class)
-    public ResponseEntity<ErrorResponse> handleInvalidStatus(InvalidStatusException ex) {
-        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(new ErrorResponse(400, ex.getMessage()));
-    }
+   
 
 }
