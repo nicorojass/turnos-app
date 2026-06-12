@@ -15,8 +15,6 @@ import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.service.AppointmentService;
 import com.grupo8.turnos_app.modules.users.entities.User;
 
-import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -33,14 +31,12 @@ public class AppointmentController {
 
     // PUT /appointments/{id}/suspend - OWNER
     @PutMapping("/appointments/{id}/suspend")
-    @Operation(summary = "Suspend appointment - deposit always refunded", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<AppointmentResponse> suspendAppointment(@PathVariable Long id) {
         return ResponseEntity.ok(appointmentService.suspendAppointment(id));
     }
 
     // DELETE /appointments/{id} - OWNER
     @DeleteMapping("/appointments/{id}")
-    @Operation(summary = "Delete an UNBOOKED slot", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Void> deleteAppointment(@PathVariable Long id) {
         appointmentService.deleteAppointment(id);
         return ResponseEntity.noContent().build();
@@ -48,7 +44,6 @@ public class AppointmentController {
 
     // GET /businesses/{id}/appointments - OWNER
     @GetMapping("/businesses/{businessId}/appointments")
-    @Operation(summary = "Get all appointments for a business (paginated)", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<Page<AppointmentResponse>> getAppointments(
             @PathVariable Long businessId,
             @RequestParam(required = false) AppointmentStatus status,
@@ -59,7 +54,6 @@ public class AppointmentController {
 
     // GET /businesses/{id}/appointments/today - OWNER
     @GetMapping("/businesses/{businessId}/appointments/today")
-    @Operation(summary = "Get today's appointments for a business", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<List<AppointmentResponse>> getTodayAppointments(
             @PathVariable Long businessId) {
         return ResponseEntity.ok(appointmentService.getTodayAppointments(businessId));
@@ -69,14 +63,12 @@ public class AppointmentController {
 
     // PUT /appointments/{id}/cancel - OWNER / EMPLOYEE / CLIENT
     @PutMapping("/appointments/{id}/cancel")
-    @Operation(summary = "Cancel appointment with deposit refund logic", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<AppointmentResponse> cancelAppointment(@PathVariable Long id) {
         return ResponseEntity.ok(appointmentService.cancelAppointment(id));
     }
 
     // GET /businesses/{id}/appointments/public - PUBLIC
     @GetMapping("/businesses/{businessId}/appointments/public")
-    @Operation(summary = "Get available slots for booking (public)")
     public ResponseEntity<List<AppointmentResponse>> getAvailableSlots(
             @PathVariable Long businessId,
             @RequestParam(required = false) Long serviceId,
@@ -87,7 +79,6 @@ public class AppointmentController {
 
     // POST /appointments/{id}/book - PUBLIC
     @PostMapping("/appointments/{id}/book")
-    @Operation(summary = "Book an appointment and create a deposit in PENDING status")
     public ResponseEntity<AppointmentResponse> bookAppointment(
             @PathVariable Long id,
             @RequestBody @Valid BookAppointmentRequest request) {
@@ -96,14 +87,12 @@ public class AppointmentController {
 
     // POST /appointments/{id}/pay-deposit - PUBLIC
     @PostMapping("/appointments/{id}/pay-deposit")
-    @Operation(summary = "Confirm deposit payment - appointment moves to BOOKED")
     public ResponseEntity<AppointmentResponse> confirmDepositPayment(@PathVariable Long id) {
         return ResponseEntity.ok(appointmentService.confirmDepositPayment(id));
     }
 
     // GET /users/me/appointments - CLIENT
     @GetMapping("/users/me/appointments")
-    @Operation(summary = "Get my appointments as a registered client", security = @SecurityRequirement(name = "bearerAuth"))
     public ResponseEntity<List<AppointmentResponse>> getMyAppointments(
             @AuthenticationPrincipal User authenticatedUser) {
         return ResponseEntity.ok(appointmentService.getMyAppointments(authenticatedUser.getId()));
