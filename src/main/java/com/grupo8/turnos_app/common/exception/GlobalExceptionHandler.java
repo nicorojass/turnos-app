@@ -10,6 +10,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentNotAvailableException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusException;
 import com.grupo8.turnos_app.modules.appointmentschedule.exception.AppointmentScheduleAlreadyExistsException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessAlreadyExistsException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
@@ -17,7 +19,6 @@ import com.grupo8.turnos_app.modules.business.exceptions.BusinessTypeAlreadyAssi
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessTypeNotFoundException;
 import com.grupo8.turnos_app.modules.business.exceptions.OwnerNotFoundException;
 import com.grupo8.turnos_app.modules.service.exception.ServiceAlreadyExistsException;
-
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -109,4 +110,18 @@ public class GlobalExceptionHandler {
         return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(new ErrorResponse(500, "Internal server error"));
     }
+
+    // appointment exceptions
+    @ExceptionHandler(AppointmentNotAvailableException.class)
+    public ResponseEntity<ErrorResponse> handleAppointmentNotAvailable(AppointmentNotAvailableException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(409, ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidStatusException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidStatus(InvalidStatusException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, ex.getMessage()));
+    }
+
 }
