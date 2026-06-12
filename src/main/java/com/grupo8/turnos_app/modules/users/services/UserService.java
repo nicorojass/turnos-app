@@ -6,6 +6,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
+import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.common.enums.RoleName;
 import com.grupo8.turnos_app.modules.role.entity.Role;
 import com.grupo8.turnos_app.modules.role.repository.RoleRepository;
@@ -51,11 +52,11 @@ public class UserService {
 
     public UserResponse updateUserRoles(Long id, Set<RoleName> roleNames) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
 
         Set<Role> roles = roleNames.stream()
                 .map(roleName -> roleRepository.findByName(roleName)
-                        .orElseThrow(() -> new RuntimeException("Role not found: " + roleName)))
+                        .orElseThrow(() -> new NotFoundException("Role not found: " + roleName)))
                 .collect(Collectors.toSet());
 
         user.getRoles().clear();
