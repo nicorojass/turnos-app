@@ -34,11 +34,10 @@ public class AppointmentScheduleController {
 
     @PostMapping
     public ResponseEntity<AppointmentScheduleResponse> create(
-            @PathVariable Long businessId,
-            @Valid @RequestBody AppointmentScheduleRequest request) {
-        request.setBusinessId(businessId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(appointmentScheduleService.create(request));
-    }
+        @PathVariable Long businessId,
+        @Valid @RequestBody AppointmentScheduleRequest request) {
+    return ResponseEntity.status(HttpStatus.CREATED).body(appointmentScheduleService.create(businessId, request));
+}
 
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable Long id) {
@@ -50,8 +49,7 @@ public class AppointmentScheduleController {
     public ResponseEntity<AppointmentScheduleResponse> update(
         @PathVariable Long businessId,
         @PathVariable Long id,
-        @Valid @RequestBody AppointmentScheduleRequest request) {
-    request.setBusinessId(businessId);
-    return ResponseEntity.ok(appointmentScheduleService.update(id, request));
+        @Valid @RequestBody AppointmentScheduleRequest request) { 
+    return ResponseEntity.ok(appointmentScheduleService.update(businessId, id, request));
 }
 }

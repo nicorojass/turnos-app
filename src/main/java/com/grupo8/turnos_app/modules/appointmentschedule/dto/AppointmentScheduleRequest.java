@@ -35,9 +35,6 @@ public class AppointmentScheduleRequest {
     @DecimalMin(value = "0.01", message = "Price must be a positive number")
     private BigDecimal price;
 
-    @NotNull(message = "Business ID is required")
-    private Long businessId;
-
     @NotNull(message = "Service ID is required")
     private Long serviceId;
 

@@ -27,7 +27,7 @@ public class UserService {
     public UserResponse getUserById(Long id) {
         return userRepository.findById(id)
                 .map(UserMapper::toResponse)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+                .orElseThrow(() -> new NotFoundException("User not found"));
     }
 
     public List<UserResponse> getAllUsers() {
@@ -37,16 +37,17 @@ public class UserService {
                 .toList();
     }
 
-    public void toggleUserActive(Long id) {
+    public UserResponse toggleUserActive(Long id) {
         User user = userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found"));
+            .orElseThrow(() -> new NotFoundException("User not found"));
         user.setActive(!user.getActive());
         userRepository.save(user);
+            return UserMapper.toResponse(user);
     }
 
     public void forceDeleteUser(Long id) {
         if (!userRepository.existsById(id))
-            throw new RuntimeException("User not found");
+            throw new NotFoundException("User not found");
         userRepository.deleteById(id);
     }
 

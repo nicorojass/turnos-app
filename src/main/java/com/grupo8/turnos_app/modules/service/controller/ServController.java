@@ -28,9 +28,10 @@ public class ServController {
     private final ServService service;
 
     @PostMapping
-    public ResponseEntity<ServResponse> createService(@PathVariable Long businessId,@Valid @RequestBody ServRequest request) {
-        request.setBusinessId(businessId);
-        return ResponseEntity.status(HttpStatus.CREATED).body(service.createService(request));
+    public ResponseEntity<ServResponse> createService(
+        @PathVariable Long businessId,
+        @Valid @RequestBody ServRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED).body(service.createService(businessId, request));
     }
 
     @GetMapping
