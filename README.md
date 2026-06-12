@@ -8,7 +8,7 @@ API REST para la gestión de turnos online. Permite a negocios registrarse, conf
 
 ## Stack
 
-- Java 17 · Spring Boot 4.0.6
+- Java 21 · Spring Boot 4.0.6
 - Spring Security 7 + JWT (jjwt 0.11.5)
 - Spring Data JPA · Hibernate 7 · MySQL
 - Bean Validation · Lombok
@@ -18,7 +18,7 @@ API REST para la gestión de turnos online. Permite a negocios registrarse, conf
 
 ## Requisitos
 
-- JDK 17+
+- JDK 21+
 - MySQL 8+
 - Maven 3.9+
 
