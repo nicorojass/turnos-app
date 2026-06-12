@@ -5,7 +5,6 @@ import java.util.List;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
-import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.common.enums.RoleName;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
@@ -30,21 +29,27 @@ public class EmployeeService {
 
     public List<UserResponse> getEmployeesByBusiness(Long businessId) {
         Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new NotFoundException("Business not found"));
+                .orElseThrow(() -> new RuntimeException("Business not found"));
         return business.getEmployees().stream()
                 .map(UserMapper::toResponse)
                 .toList();
     }
 
-    public UserResponse createEmployee(Long businessId, EmployeeRequest request) {
+    public UserResponse createEmployee(Long businessId, EmployeeRequest request, String ownerEmail) {
         Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new NotFoundException("Business not found"));
+                .orElseThrow(() -> new RuntimeException("Business not found"));
+
+        User owner = userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() -> new RuntimeException("Owner not found"));
+
+        if (!business.getOwner().getId().equals(owner.getId()))
+            throw new RuntimeException("You are not the owner of this business");
 
         if (userRepository.existsByEmail(request.getEmail()))
             throw new RuntimeException("Email already in use");
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
-                .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
+                .orElseThrow(() -> new RuntimeException("EMPLOYEE role not found"));
 
         User employee = User.builder()
                 .name(request.getName())
@@ -63,12 +68,12 @@ public class EmployeeService {
     public UserResponse getEmployee(Long id) {
         return userRepository.findById(id)
                 .map(UserMapper::toResponse)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
     }
 
     public UserResponse updateEmployee(Long id, EmployeeRequest request) {
         User employee = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
         employee.setName(request.getName());
         employee.setEmail(request.getEmail());
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
@@ -79,10 +84,10 @@ public class EmployeeService {
 
     public void removeEmployee(Long id) {
         User employee = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
-                .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
+                .orElseThrow(() -> new RuntimeException("EMPLOYEE role not found"));
 
         employee.getRoles().remove(employeeRole);
         userRepository.save(employee);
