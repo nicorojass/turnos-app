@@ -8,6 +8,7 @@ import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleRequest;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleResponse;
 import com.grupo8.turnos_app.modules.appointmentschedule.entity.AppointmentSchedule;
+import com.grupo8.turnos_app.modules.appointmentschedule.exception.AppointmentScheduleAlreadyExistsException;
 import com.grupo8.turnos_app.modules.appointmentschedule.mapper.AppointmentScheduleMapper;
 import com.grupo8.turnos_app.modules.appointmentschedule.repository.AppointmentScheduleRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
@@ -35,9 +36,9 @@ public class AppointmentScheduleService {
                 .toList();
     }
 
-    public AppointmentScheduleResponse create(AppointmentScheduleRequest request) {
-        Business business = businessRepository.findById(request.getBusinessId())
-                .orElseThrow(() -> new NotFoundException("Business not found"));
+    public AppointmentScheduleResponse create(Long businessId, AppointmentScheduleRequest request) {
+    Business business = businessRepository.findById(businessId)
+            .orElseThrow(() -> new NotFoundException("Business not found"));
 
         Serv service = servRepository.findById(request.getServiceId())
                 .orElseThrow(() -> new NotFoundException("Service not found"));
@@ -46,6 +47,11 @@ public class AppointmentScheduleService {
         if (request.getEmployeeId() != null) {
             employee = userRepository.findById(request.getEmployeeId())
                     .orElseThrow(() -> new NotFoundException("Employee not found"));
+        }
+        
+        if (appointmentScheduleRepository.existsByBusinessIdAndDayNumberAndStartTimeAndEndTime(
+                businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime())) {
+        throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day and time range");
         }
 
         AppointmentSchedule schedule = AppointmentScheduleMapper.toEntity(request);
@@ -62,7 +68,7 @@ public class AppointmentScheduleService {
         appointmentScheduleRepository.delete(schedule);
     }
 
-    public AppointmentScheduleResponse update(Long id, AppointmentScheduleRequest request) {
+    public AppointmentScheduleResponse update(Long businessId, Long id, AppointmentScheduleRequest request) {
     AppointmentSchedule schedule = appointmentScheduleRepository.findById(id)
             .orElseThrow(() -> new NotFoundException("Appointment schedule not found"));
 
@@ -75,6 +81,10 @@ public class AppointmentScheduleService {
                 .orElseThrow(() -> new NotFoundException("Employee not found"));
     }
 
+    if (appointmentScheduleRepository.existsByBusinessIdAndDayNumberAndStartTimeAndEndTimeAndIdNot(
+        businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime(), id)) {
+    throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day and time range");
+        }
     schedule.setDayNumber(request.getDayNumber());
     schedule.setStartTime(request.getStartTime());
     schedule.setEndTime(request.getEndTime());

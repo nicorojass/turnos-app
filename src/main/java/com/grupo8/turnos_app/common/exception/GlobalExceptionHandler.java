@@ -9,6 +9,7 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.grupo8.turnos_app.modules.appointmentschedule.exception.AppointmentScheduleAlreadyExistsException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessAlreadyExistsException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessTypeAlreadyAssignedException;
@@ -80,6 +81,12 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ServiceAlreadyExistsException.class)
     public ResponseEntity<ErrorResponse> handleServiceAlreadyExists(ServiceAlreadyExistsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+                .body(new ErrorResponse(409, ex.getMessage()));
+    }
+    
+    @ExceptionHandler(AppointmentScheduleAlreadyExistsException.class)
+    public ResponseEntity<ErrorResponse> handleAppointmentScheduleAlreadyExists(AppointmentScheduleAlreadyExistsException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
                 .body(new ErrorResponse(409, ex.getMessage()));
     }
