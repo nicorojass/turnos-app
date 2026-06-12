@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.grupo8.turnos_app.modules.business.dto.BusinessRequest;
 import com.grupo8.turnos_app.modules.business.dto.BusinessResponse;
 import com.grupo8.turnos_app.modules.business.services.BusinessService;
+
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -28,10 +30,14 @@ public class BusinessController {
     
     private final BusinessService businessService;
 
+
     @PostMapping
-    public ResponseEntity<BusinessResponse> createBusiness(@RequestBody @Valid BusinessRequest request) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(businessService.createBusiness(request));
-    }
+    public ResponseEntity<BusinessResponse> createBusiness(
+        Authentication authentication,
+        @Valid @RequestBody BusinessRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+        .body(businessService.createBusiness(authentication.getName(), request));
+}
 
     @GetMapping("/{id}")
     public ResponseEntity<BusinessResponse> getBusiness(@PathVariable Long id) {
