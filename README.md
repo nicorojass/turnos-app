@@ -2,7 +2,7 @@
 
 API REST para la gestión de turnos online. Permite a negocios registrarse, configurar su agenda y servicios, y recibir reservas de clientes con lógica de seña integrada.
 
-**Programación III · Grupo 8 · Tosunian · Rojas · Irianni ·**
+**Programación III · Grupo 8 · Tosunian · Rojas · Irianni**
 
 ---
 
@@ -32,7 +32,7 @@ Crear la base de datos:
 CREATE DATABASE db_turnos;
 ```
 
-Crear el archivo `src/main/resources/application.properties` con el siguiente contenido (no está en el repo):
+Crear el archivo `src/main/resources/application.properties` (no está en el repo):
 
 ```properties
 spring.datasource.url=jdbc:mysql://localhost:3306/db_turnos
@@ -105,11 +105,12 @@ El token se obtiene en `POST /api/v1/auth/login`.
 
 ### Autenticación `/api/v1/auth`
 
-| Método | Path        | Descripción                                 | Acceso      |
-| ------ | ----------- | ------------------------------------------- | ----------- |
-| POST   | `/register` | Registro. Asigna rol OWNER automáticamente. | Público     |
-| POST   | `/login`    | Login. Devuelve JWT.                        | Público     |
-| GET    | `/me`       | Usuario autenticado + roles.                | Autenticado |
+| Método | Path              | Descripción                                  | Acceso      |
+| ------ | ----------------- | -------------------------------------------- | ----------- |
+| POST   | `/register`       | Registro de owner. Asigna rol OWNER.         | Público     |
+| POST   | `/register/client`| Registro de cliente. Asigna rol CLIENT.      | Público     |
+| POST   | `/login`          | Login. Devuelve JWT.                         | Público     |
+| GET    | `/me`             | Usuario autenticado + roles.                 | Autenticado |
 
 ### Negocios `/api/v1/businesses`
 
@@ -152,26 +153,27 @@ El token se obtiene en `POST /api/v1/auth/login`.
 
 ### Plantillas de turnos `/api/v1/businesses/{businessId}/appointment-schedules`
 
-| Método | Path    | Descripción                          | Acceso |
-| ------ | ------- | ------------------------------------ | ------ |
-| GET    | `/`     | Listar plantillas de slots.          | OWNER  |
-| POST   | `/`     | Crear plantilla de turno recurrente. | OWNER  |
-| PUT    | `/{id}` | Editar plantilla.                    | OWNER  |
-| DELETE | `/{id}` | Eliminar plantilla.                  | OWNER  |
+| Método | Path         | Descripción                                          | Acceso |
+| ------ | ------------ | ---------------------------------------------------- | ------ |
+| GET    | `/`          | Listar plantillas de slots.                          | OWNER  |
+| POST   | `/`          | Crear plantilla de turno recurrente.                 | OWNER  |
+| PUT    | `/{id}`      | Editar plantilla.                                    | OWNER  |
+| DELETE | `/{id}`      | Eliminar plantilla.                                  | OWNER  |
+| POST   | `/generate`  | Generar turnos reales a partir de las plantillas.    | OWNER  |
 
 ### Turnos `/api/v1`
 
-| Método | Path                                   | Descripción                                 | Acceso                    |
-| ------ | -------------------------------------- | ------------------------------------------- | ------------------------- |
-| GET    | `/businesses/{id}/appointments`        | Todos los turnos del negocio.               | OWNER                     |
-| GET    | `/businesses/{id}/appointments/today`  | Turnos del día.                             | OWNER                     |
-| GET    | `/businesses/{id}/appointments/public` | Slots disponibles.                          | Público                   |
-| POST   | `/appointments/{id}/book`              | Reservar turno. Crea seña PENDING.          | Público                   |
-| POST   | `/appointments/{id}/pay-deposit`       | Confirmar seña. Turno → BOOKED.             | Público                   |
-| PUT    | `/appointments/{id}/cancel`            | Cancelar turno.                             | OWNER / EMPLOYEE / CLIENT |
-| PUT    | `/appointments/{id}/suspend`           | Suspender turno (negocio). Seña → REFUNDED. | OWNER                     |
-| DELETE | `/appointments/{id}`                   | Eliminar turno.                             | OWNER                     |
-| GET    | `/users/me/appointments`               | Mis turnos como cliente registrado.         | CLIENT                    |
+| Método | Path                                   | Descripción                                 | Acceso      |
+| ------ | -------------------------------------- | ------------------------------------------- | ----------- |
+| GET    | `/businesses/{id}/appointments`        | Todos los turnos del negocio (paginado).    | OWNER       |
+| GET    | `/businesses/{id}/appointments/today`  | Turnos del día.                             | OWNER       |
+| GET    | `/businesses/{id}/appointments/public` | Slots disponibles para reservar.            | Público     |
+| POST   | `/appointments/{id}/book`              | Reservar turno. Crea seña PENDING.          | Público     |
+| POST   | `/appointments/{id}/pay-deposit`       | Confirmar seña. Turno pasa a BOOKED.        | Público     |
+| PUT    | `/appointments/{id}/cancel`            | Cancelar turno.                             | Autenticado |
+| PUT    | `/appointments/{id}/suspend`           | Suspender turno (negocio). Seña → REFUNDED. | OWNER       |
+| DELETE | `/appointments/{id}`                   | Eliminar turno (solo UNBOOKED).             | OWNER       |
+| GET    | `/users/me/appointments`               | Mis turnos como cliente registrado.         | Autenticado |
 
 ### Empleados `/api/v1`
 
@@ -183,33 +185,46 @@ El token se obtiene en `POST /api/v1/auth/login`.
 | PUT    | `/employees/{id}`            | Editar empleado.                          | OWNER  |
 | DELETE | `/employees/{id}`            | Desasociar empleado (quita rol EMPLOYEE). | OWNER  |
 
-### Reportes `/api/v1/businesses/{businessId}/reports`
-
-| Método | Path                               | Descripción                       | Acceso |
-| ------ | ---------------------------------- | --------------------------------- | ------ |
-| GET    | `/summary`                         | Resumen general.                  | OWNER  |
-| GET    | `/by-month`                        | Turnos por mes.                   | OWNER  |
-| GET    | `/by-service`                      | Turnos por servicio.              | OWNER  |
-| GET    | `/by-employee`                     | Turnos por empleado.              | OWNER  |
-| GET    | `/cancellations`                   | Cancelaciones con/sin devolución. | OWNER  |
-| GET    | `/api/v1/admin/reports/businesses` | Vista global de la plataforma.    | ADMIN  |
-
 ### Administración `/api/v1/admin/users`
 
-| Método | Path          | Descripción             | Acceso |
-| ------ | ------------- | ----------------------- | ------ |
-| GET    | `/`           | Listar usuarios.        | ADMIN  |
-| GET    | `/{id}`       | Ver usuario + roles.    | ADMIN  |
-| PATCH  | `/{id}/roles` | Asignar / quitar roles. | ADMIN  |
-| DELETE | `/{id}`       | Soft delete de usuario. | ADMIN  |
+| Método | Path          | Descripción                     | Acceso |
+| ------ | ------------- | ------------------------------- | ------ |
+| GET    | `/`           | Listar todos los usuarios.      | ADMIN  |
+| GET    | `/{id}`       | Ver usuario + roles.            | ADMIN  |
+| PATCH  | `/{id}/roles` | Asignar / quitar roles.         | ADMIN  |
+| PATCH  | `/{id}/active`| Activar / desactivar usuario.   | ADMIN  |
+| DELETE | `/{id}`       | Hard delete de usuario.         | ADMIN  |
+
+---
+
+## Flujo de generación de turnos
+
+Los turnos se generan a partir de **plantillas** (`AppointmentSchedule`). Cada plantilla define un bloque recurrente semanal: día de la semana, horario de inicio y fin, servicio y empleado opcional.
+
+El generador (`AppointmentGeneratorService`) toma cada plantilla y crea slots `UNBOOKED` individuales según la duración del servicio, para los próximos N días (configurado en `scheduleDaysToCreate` del negocio).
+
+**Ejemplo:** plantilla viernes 09:00-12:00, servicio de 30 min → genera turnos a las 09:00, 09:30, 10:00... para cada viernes dentro del rango.
+
+La generación corre automáticamente **todos los días a las 01:00** y también puede dispararse manualmente con `POST /appointment-schedules/generate`.
+
+---
+
+## Flujo de reserva de un turno
+
+```
+1. GET  /businesses/{id}/appointments/public     → cliente ve slots disponibles
+2. POST /appointments/{id}/book                  → cliente reserva (UNBOOKED → AWAITING_PAYMENT)
+                                                    se crea seña PENDING automáticamente
+3. POST /appointments/{id}/pay-deposit           → cliente confirma pago (→ BOOKED, seña → PAID)
+```
 
 ---
 
 ## Flujo de estados de un turno
 
 ```
-UNBOOKED → AWAITING_PAYMENT → BOOKED → CANCELLED
-                                      → SUSPENDED
+UNBOOKED → AWAITING_PAYMENT → BOOKED ─┬→ CANCELLED
+                                       └→ SUSPENDED
 ```
 
 ### Regla de cancelación
@@ -221,3 +236,10 @@ UNBOOKED → AWAITING_PAYMENT → BOOKED → CANCELLED
 | Suspensión por el negocio              | REFUNDED siempre |
 
 ---
+
+## Seguridad
+
+- Autenticación stateless con JWT
+- Contraseñas hasheadas con BCrypt
+- Locking pesimista (`PESSIMISTIC_WRITE`) en la reserva de turnos para evitar doble booking concurrente
+- Validación de propiedad: un owner solo puede gestionar su propio negocio y sus empleados
