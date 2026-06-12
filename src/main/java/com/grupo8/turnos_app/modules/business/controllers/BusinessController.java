@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.RestController;
 import com.grupo8.turnos_app.modules.business.dto.BusinessRequest;
 import com.grupo8.turnos_app.modules.business.dto.BusinessResponse;
 import com.grupo8.turnos_app.modules.business.services.BusinessService;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -45,6 +47,11 @@ public class BusinessController {
     public ResponseEntity<BusinessResponse> getBusinessBySlug(@PathVariable String slug) {
         return ResponseEntity.ok(businessService.getBusinessBySlug(slug));
     }
+
+    @GetMapping("/mine")
+    public ResponseEntity<BusinessResponse> getMyBusiness(@AuthenticationPrincipal UserDetails userDetails) {
+        return ResponseEntity.ok(businessService.getMyBusiness(userDetails.getUsername()));
+}
 
     @PutMapping("/{id}")
     public ResponseEntity<BusinessResponse> updateBusiness(@PathVariable Long id, @RequestBody @Valid BusinessRequest request) {

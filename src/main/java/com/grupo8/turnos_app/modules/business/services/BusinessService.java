@@ -140,4 +140,12 @@ public class BusinessService {
         return BusinessMapper.toResponse(businessRepository.save(business));
     }
 
+    public BusinessResponse getMyBusiness(String email) {
+        User owner = userRepository.findByEmail(email)
+            .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
+        return businessRepository.findByOwner_Id(owner.getId())
+            .map(BusinessMapper::toResponse)
+            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+}
+
 }
