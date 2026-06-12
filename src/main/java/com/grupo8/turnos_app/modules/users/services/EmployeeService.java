@@ -53,7 +53,7 @@ public class EmployeeService {
             throw new EmailAlreadyInUseException("Email already in use");
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
-                .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
+                .orElseThrow(() -> new RuntimeException("EMPLOYEE role not found"));
 
         User employee = User.builder()
                 .name(request.getName())
@@ -72,12 +72,12 @@ public class EmployeeService {
     public UserResponse getEmployee(Long id) {
         return userRepository.findById(id)
                 .map(UserMapper::toResponse)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
     }
 
     public UserResponse updateEmployee(Long id, EmployeeRequest request) {
         User employee = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
         employee.setName(request.getName());
         employee.setEmail(request.getEmail());
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
@@ -88,10 +88,10 @@ public class EmployeeService {
 
     public void removeEmployee(Long id) {
         User employee = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+                .orElseThrow(() -> new RuntimeException("Employee not found"));
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
-                .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
+                .orElseThrow(() -> new RuntimeException("EMPLOYEE role not found"));
 
         employee.getRoles().remove(employeeRole);
         userRepository.save(employee);
