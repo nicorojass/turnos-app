@@ -39,7 +39,7 @@ public class AppointmentService {
   private final DepositRepository depositRepository;
   private final UserRepository userRepository;
 
-  // -------- QUERY FUNCTIONS ------------
+  // -------- QUERY SERVICES ------------
 
   // returns all appointments for a business, paginated and filterable by status
   public Page<AppointmentResponse> getAppointmentsByBusiness(
@@ -87,8 +87,8 @@ public class AppointmentService {
         .map(appointment -> AppointmentMapper.toResponse(appointment))
         .collect(java.util.stream.Collectors.toList());
   }
-  // -----------
 
+  // -------- SERVICES (BOOK, CANCEL, SUSPEND, DELETE) ------------
   // BOOK APPOINTMENT | /book
   // uses pessimistic lock to avoid double booking on concurrent requests
 
@@ -275,7 +275,7 @@ public class AppointmentService {
     // check status so only unbooked appts are able to be hard deleted
     if (appointment.getStatus() != AppointmentStatus.UNBOOKED) {
       throw new InvalidStatusException(
-          "Error al eliminar el turno: solo los turnos no reservados pueden ser eliminados.");
+          "Error al eliminar el turno: solo los turnos sin reservar pueden ser eliminados.");
     }
 
     appointmentRepository.delete(appointment);
