@@ -21,7 +21,7 @@ public class BusinessMapper {
                 .scheduleEnd(business.getScheduleEnd())
                 .scheduleDaysToCreate(business.getScheduleDaysToCreate())
                 .scheduleAnticipation(business.getScheduleAnticipation())
-                .active(business.getActive())
+                .deleted(business.getDeleted())
                 .ownerId(business.getOwner().getId())
                 .businessTypes(
                     business.getBusinessTypes() == null ? Collections.emptyList() :

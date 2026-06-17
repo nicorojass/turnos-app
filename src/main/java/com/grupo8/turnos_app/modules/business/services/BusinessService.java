@@ -105,7 +105,7 @@ public class BusinessService {
     public void deleteBusiness(Long id) {
         Business business = businessRepository.findById(id)
             .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
-        business.setActive(false);
+        business.setDeleted(true);
         businessRepository.save(business);
     }
 

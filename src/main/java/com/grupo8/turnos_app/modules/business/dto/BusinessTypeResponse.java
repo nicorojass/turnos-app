@@ -14,5 +14,5 @@ public class BusinessTypeResponse {
 
     private Long id;
     private String name;
-    private Boolean active;
+    private Boolean deleted;
 }

@@ -58,11 +58,11 @@ public class Business {
 
     private Integer scheduleAnticipation;
 
-    private Boolean active;
+    private Boolean deleted;
 
     @PrePersist
     protected void OnCreate() {
-        active = true;
+        this.deleted = false;
     }
 
     @OneToOne(fetch = FetchType.LAZY)

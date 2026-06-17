@@ -25,7 +25,7 @@ public class BusinessResponse {
     private LocalDateTime scheduleEnd;
     private Integer scheduleDaysToCreate;
     private Integer scheduleAnticipation;
-    private Boolean active;
+    private Boolean deleted;
     private Long ownerId;
     private List<BusinessTypeResponse> businessTypes;
 }

@@ -9,5 +9,5 @@ import com.grupo8.turnos_app.modules.business.entities.BusinessType;
 
 public interface BusinessTypeRepository extends JpaRepository<BusinessType, Long> {
     boolean existsByName(String name);
-    List<BusinessType> findAllByActiveTrue();
+    List<BusinessType> findAllByDeletedFalse();
 }

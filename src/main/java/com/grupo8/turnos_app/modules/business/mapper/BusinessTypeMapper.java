@@ -10,7 +10,7 @@ public class BusinessTypeMapper {
         return BusinessTypeResponse.builder()
                 .id(businessType.getId())
                 .name(businessType.getName())
-                .active(businessType.getActive())
+                .deleted(businessType.getDeleted())
                 .build();
     }
 

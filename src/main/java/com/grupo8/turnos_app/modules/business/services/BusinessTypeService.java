@@ -29,7 +29,7 @@ public class BusinessTypeService {
     }
 
     public List<BusinessTypeResponse> getAllBusinessTypes() {
-        return businessTypeRepository.findAllByActiveTrue()
+        return businessTypeRepository.findAllByDeletedFalse()
                 .stream()
                 .map(BusinessTypeMapper::toResponse)
                 .toList();
@@ -43,11 +43,11 @@ public class BusinessTypeService {
         return BusinessTypeMapper.toResponse(businessTypeRepository.save(businessType));
     }
 
-    public void toggleBusinessTypeActive(Long id) {
+    public void toggleBusinessTypeDeleted(Long id) {
         BusinessType businessType = businessTypeRepository.findById(id)
                 .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
 
-        businessType.setActive(!businessType.getActive());
+        businessType.setDeleted(!businessType.getDeleted());
         businessTypeRepository.save(businessType);
     }
 }

@@ -43,8 +43,8 @@ public class BusinessTypeController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> toggleBusinessTypeActive(@PathVariable Long id) {
-        businessTypeService.toggleBusinessTypeActive(id);
+    public ResponseEntity<Void> toggleBusinessTypeDeleted(@PathVariable Long id) {
+        businessTypeService.toggleBusinessTypeDeleted(id);
         return ResponseEntity.noContent().build();
     }
 }

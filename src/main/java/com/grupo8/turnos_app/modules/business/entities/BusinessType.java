@@ -28,10 +28,10 @@ public class BusinessType {
     @Column(nullable = false, unique = true)
     private String name;
 
-    private Boolean active;
+    private Boolean deleted;
 
     @PrePersist
     protected void OnCreate() {
-        active = true;
+        this.deleted = false;
     }
 }
