@@ -82,8 +82,6 @@ public class Appointment {
   @JoinColumn(name = "client_user_id")
   private User clientUser;
 
-  @OneToOne(mappedBy = "appointment", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
-  // cascade added only for delete appointment function, so associated deposit
-  // also deletes
+  @OneToOne(mappedBy = "appointment", fetch = FetchType.LAZY)
   private Deposit deposit;
 }
