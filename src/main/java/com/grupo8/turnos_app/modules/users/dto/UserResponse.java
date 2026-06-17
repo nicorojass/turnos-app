@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.users.dto;
 
 import java.time.LocalDateTime;
 import java.util.Set;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.common.enums.RoleName;
 
@@ -17,7 +18,7 @@ import lombok.Setter;
 @Builder
 public class UserResponse {
 
-    private Long id;
+    private UUID id;
     private String name;
     private String email;
     private LocalDateTime createdAt;

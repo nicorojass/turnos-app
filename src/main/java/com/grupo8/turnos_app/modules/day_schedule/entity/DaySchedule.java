@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.day_schedule.entity;
 
 import java.time.LocalTime;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.common.enums.DayOfWeek;
 import com.grupo8.turnos_app.modules.business.entities.Business;
@@ -15,6 +16,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
@@ -39,6 +41,9 @@ public class DaySchedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private DayOfWeek day;
@@ -54,6 +59,11 @@ public class DaySchedule {
 
     @Column(nullable = false)
     private Boolean enabled;
+
+    @PrePersist
+    protected void onCreate() {
+        this.publicId = UUID.randomUUID();
+    }
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "business_id", nullable = false)

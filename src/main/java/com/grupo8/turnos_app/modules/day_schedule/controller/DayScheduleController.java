@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.day_schedule.controller;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -27,14 +28,14 @@ public class DayScheduleController {
     // Returns whole week's schedule settings per day
     @GetMapping
     public ResponseEntity<List<DayScheduleResponse>> getSchedule(
-            @PathVariable Long businessId) {
+            @PathVariable UUID businessId) {
         return ResponseEntity.ok(dayScheduleService.getScheduleByBusiness(businessId));
     }
 
     // Req exxpects a list of days to modify, not the whole week
     @PutMapping
     public ResponseEntity<List<DayScheduleResponse>> updateFullSchedule(
-            @PathVariable Long businessId,
+            @PathVariable UUID businessId,
             @RequestBody @Valid List<DayScheduleUpdateRequest> requests) {
         return ResponseEntity.ok(dayScheduleService.updateFullSchedule(businessId, requests));
     }

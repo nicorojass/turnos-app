@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.business.services;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
@@ -35,16 +36,16 @@ public class BusinessTypeService {
                 .toList();
     }
 
-    public BusinessTypeResponse updateBusinessType(Long id, BusinessTypeRequest request) {
-        BusinessType businessType = businessTypeRepository.findById(id)
+    public BusinessTypeResponse updateBusinessType(UUID publicId, BusinessTypeRequest request) {
+        BusinessType businessType = businessTypeRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
 
         businessType.setName(request.getName());
         return BusinessTypeMapper.toResponse(businessTypeRepository.save(businessType));
     }
 
-    public void toggleBusinessTypeDeleted(Long id) {
-        BusinessType businessType = businessTypeRepository.findById(id)
+    public void toggleBusinessTypeDeleted(UUID publicId) {
+        BusinessType businessType = businessTypeRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
 
         businessType.setDeleted(!businessType.getDeleted());

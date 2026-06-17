@@ -11,7 +11,7 @@ public class BusinessMapper {
 
     public static BusinessResponse toResponse(Business business) {
         return BusinessResponse.builder()
-                .id(business.getId())
+                .id(business.getPublicId())
                 .name(business.getName())
                 .email(business.getEmail())
                 .slug(business.getSlug())

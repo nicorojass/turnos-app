@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.service.service;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
@@ -24,9 +25,9 @@ public class ServService {
     private final ServRepository serviceRepository;
     private final BusinessRepository businessRepository;
 
-    public ServResponse createService(Long businessId, ServRequest request) {
+    public ServResponse createService(UUID businessId, ServRequest request) {
 
-    Business business = businessRepository.findById(businessId)
+    Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
 
     Serv service = ServMapper.toEntity(request);
@@ -34,21 +35,23 @@ public class ServService {
     service.setDeleted(false);
 
     if (serviceRepository.existsByBusinessIdAndNameAndDurationMinutesAndPriceAndDepositPorcentage(
-        businessId, request.getName(), request.getDurationMinutes(), request.getPrice(), request.getDepositPorcentage())) {
+        business.getId(), request.getName(), request.getDurationMinutes(), request.getPrice(), request.getDepositPorcentage())) {
     throw new ServiceAlreadyExistsException("An identical service already exists for this business");
 }
     return ServMapper.toResponse(serviceRepository.save(service));
 }
 
-    public List<ServResponse> getServicesByBusinessId(Long businessId) {
-        List<Serv> services = serviceRepository.findByBusinessId(businessId);
+    public List<ServResponse> getServicesByBusinessId(UUID businessId) {
+        Business business = businessRepository.findByPublicId(businessId)
+            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+        List<Serv> services = serviceRepository.findByBusinessId(business.getId());
         return services.stream()
                 .map(ServMapper::toResponse)
                 .toList();
     }
 
-    public ServResponse editService(Long serviceId, ServRequest request) {
-    Serv service = serviceRepository.findById(serviceId)
+    public ServResponse editService(UUID publicId, ServRequest request) {
+    Serv service = serviceRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Service not found"));
 
     if (serviceRepository.existsByBusinessIdAndNameAndDurationMinutesAndPriceAndDepositPorcentage(
@@ -66,8 +69,8 @@ public class ServService {
 }
 
 
-    public void deleteService(Long serviceId) {
-        Serv service = serviceRepository.findById(serviceId).orElseThrow(() -> new NotFoundException("Service not found"));
+    public void deleteService(UUID publicId) {
+        Serv service = serviceRepository.findByPublicId(publicId).orElseThrow(() -> new NotFoundException("Service not found"));
         service.setDeleted(true);
         serviceRepository.save(service);
     }

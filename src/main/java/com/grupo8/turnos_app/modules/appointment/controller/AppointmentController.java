@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.appointment.controller;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -37,13 +38,13 @@ public class AppointmentController {
 
     // PUT /appointments/{id}/suspend - OWNER
     @PutMapping("/appointments/{id}/suspend")
-    public ResponseEntity<AppointmentResponse> suspendAppointment(@PathVariable Long id) {
+    public ResponseEntity<AppointmentResponse> suspendAppointment(@PathVariable UUID id) {
         return ResponseEntity.ok(appointmentService.suspendAppointment(id));
     }
 
     // DELETE /appointments/{id} - OWNER
     @DeleteMapping("/appointments/{id}")
-    public ResponseEntity<Void> deleteAppointment(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteAppointment(@PathVariable UUID id) {
         appointmentService.deleteAppointment(id);
         return ResponseEntity.noContent().build();
     }
@@ -51,7 +52,7 @@ public class AppointmentController {
     // GET /businesses/{id}/appointments - OWNER
     @GetMapping("/businesses/{businessId}/appointments")
     public ResponseEntity<Page<AppointmentResponse>> getAppointments(
-            @PathVariable Long businessId,
+            @PathVariable UUID businessId,
             @RequestParam(required = false) AppointmentStatus status,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(
@@ -61,7 +62,7 @@ public class AppointmentController {
     // GET /businesses/{id}/appointments/today - OWNER
     @GetMapping("/businesses/{businessId}/appointments/today")
     public ResponseEntity<List<AppointmentResponse>> getTodayAppointments(
-            @PathVariable Long businessId) {
+            @PathVariable UUID businessId) {
         return ResponseEntity.ok(appointmentService.getTodayAppointments(businessId));
     }
 
@@ -69,14 +70,14 @@ public class AppointmentController {
 
     // PUT /appointments/{id}/cancel - OWNER / EMPLOYEE / CLIENT
     @PutMapping("/appointments/{id}/cancel")
-    public ResponseEntity<AppointmentResponse> cancelAppointment(@PathVariable Long id) {
+    public ResponseEntity<AppointmentResponse> cancelAppointment(@PathVariable UUID id) {
         return ResponseEntity.ok(appointmentService.cancelAppointment(id));
     }
 
     // GET /businesses/{id}/appointments/public - PUBLIC
     @GetMapping("/businesses/{businessId}/appointments/public")
     public ResponseEntity<List<AppointmentResponse>> getAvailableSlots(
-            @PathVariable Long businessId,
+            @PathVariable UUID businessId,
             @RequestParam(required = false) Long serviceId,
             @RequestParam(required = false) Long employeeId) {
         return ResponseEntity.ok(
@@ -86,14 +87,14 @@ public class AppointmentController {
     // POST /appointments/{id}/book - PUBLIC
     @PostMapping("/appointments/{id}/book")
     public ResponseEntity<AppointmentResponse> bookAppointment(
-            @PathVariable Long id,
+            @PathVariable UUID id,
             @RequestBody @Valid BookAppointmentRequest request) {
         return ResponseEntity.ok(appointmentService.bookAppointment(id, request));
     }
 
     // POST /appointments/{id}/pay-deposit - PUBLIC
     @PostMapping("/appointments/{id}/pay-deposit")
-    public ResponseEntity<AppointmentResponse> confirmDepositPayment(@PathVariable Long id) {
+    public ResponseEntity<AppointmentResponse> confirmDepositPayment(@PathVariable UUID id) {
         return ResponseEntity.ok(appointmentService.confirmDepositPayment(id));
     }
 

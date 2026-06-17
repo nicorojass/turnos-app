@@ -11,7 +11,7 @@ public class AppointmentMapper {
       return null;
 
     return AppointmentResponse.builder()
-        .id(appointment.getId())
+        .id(appointment.getPublicId())
         .startDatetime(appointment.getStartDatetime())
         .endDatetime(appointment.getEndDatetime())
         .status(appointment.getStatus())

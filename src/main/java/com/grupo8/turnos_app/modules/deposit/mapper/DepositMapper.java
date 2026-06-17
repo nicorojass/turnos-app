@@ -8,7 +8,7 @@ public class DepositMapper {
     if (deposit == null)
       return null;
     return DepositResponse.builder()
-        .id(deposit.getId())
+        .id(deposit.getPublicId())
         .amount(deposit.getAmount())
         .status(deposit.getStatus())
         .paidAt(deposit.getPaidAt())

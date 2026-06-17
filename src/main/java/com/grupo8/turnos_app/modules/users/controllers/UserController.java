@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.users.controllers;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -31,17 +32,17 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @PatchMapping("/{id}/roles")
-    public ResponseEntity<UserResponse> updateUserRoles(@PathVariable Long id, @RequestBody @Valid RoleUpdateRequest request) {
+    public ResponseEntity<UserResponse> updateUserRoles(@PathVariable UUID id, @RequestBody @Valid RoleUpdateRequest request) {
         return ResponseEntity.ok(userService.updateUserRoles(id, request.getRoles()));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<UserResponse> toggleUserActive(@PathVariable Long id) {
+    public ResponseEntity<UserResponse> toggleUserActive(@PathVariable UUID id) {
         return ResponseEntity.ok(userService.toggleUserActive(id));
 }
 }

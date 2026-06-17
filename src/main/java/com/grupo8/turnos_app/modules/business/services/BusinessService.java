@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.business.services;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
@@ -60,8 +61,8 @@ public class BusinessService {
     return BusinessMapper.toResponse(savedBusiness);
 }
 
-    public BusinessResponse getBusinessById(Long id) {
-        return businessRepository.findById(id)
+    public BusinessResponse getBusinessById(UUID publicId) {
+        return businessRepository.findByPublicId(publicId)
                 .map(BusinessMapper::toResponse)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
     }
@@ -79,8 +80,8 @@ public class BusinessService {
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
     }
 
-    public BusinessResponse updateBusiness(Long id, BusinessRequest request) {
-        Business business = businessRepository.findById(id)
+    public BusinessResponse updateBusiness(UUID publicId, BusinessRequest request) {
+        Business business = businessRepository.findByPublicId(publicId)
             .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
 
         business.setName(request.getName());
@@ -102,24 +103,24 @@ public class BusinessService {
         return BusinessMapper.toResponse(businessRepository.save(business));
     }
 
-    public void deleteBusiness(Long id) {
-        Business business = businessRepository.findById(id)
+    public void deleteBusiness(UUID publicId) {
+        Business business = businessRepository.findByPublicId(publicId)
             .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
         business.setDeleted(true);
         businessRepository.save(business);
     }
 
-    public void forceDeleteBusiness(Long id) {
-        if (!businessRepository.existsById(id))
-            throw new BusinessNotFoundException("Business not found");
-        businessRepository.deleteById(id);
+    public void forceDeleteBusiness(UUID publicId) {
+        Business business = businessRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+        businessRepository.delete(business);
     }
 
-    public BusinessResponse addTypeToBusiness(Long businessId, Long typeId) {
-        Business business = businessRepository.findById(businessId)
+    public BusinessResponse addTypeToBusiness(UUID businessId, UUID typeId) {
+        Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
 
-        BusinessType businessType = businessTypeRepository.findById(typeId)
+        BusinessType businessType = businessTypeRepository.findByPublicId(typeId)
                 .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
 
         if (business.getBusinessTypes().contains(businessType))
@@ -129,11 +130,11 @@ public class BusinessService {
         return BusinessMapper.toResponse(businessRepository.save(business));
     }
 
-    public BusinessResponse removeTypeFromBusiness(Long businessId, Long typeId) {
-        Business business = businessRepository.findById(businessId)
+    public BusinessResponse removeTypeFromBusiness(UUID businessId, UUID typeId) {
+        Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
 
-        BusinessType businessType = businessTypeRepository.findById(typeId)
+        BusinessType businessType = businessTypeRepository.findByPublicId(typeId)
                 .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
 
         business.getBusinessTypes().remove(businessType);

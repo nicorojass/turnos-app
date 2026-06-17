@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.appointment.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.modules.deposit.dto.DepositResponse;
@@ -14,7 +15,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class AppointmentResponse {
-    private Long id;
+    private UUID id;
     private LocalDateTime startDatetime;
     private LocalDateTime endDatetime;
     private AppointmentStatus status;

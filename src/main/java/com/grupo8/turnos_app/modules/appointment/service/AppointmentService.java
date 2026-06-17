@@ -6,6 +6,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -24,6 +25,8 @@ import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusExcepti
 import com.grupo8.turnos_app.modules.appointment.exceptions.NoServiceException;
 import com.grupo8.turnos_app.modules.appointment.mapper.AppointmentMapper;
 import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
+import com.grupo8.turnos_app.modules.business.entities.Business;
+import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.deposit.entity.Deposit;
 import com.grupo8.turnos_app.modules.deposit.repository.DepositRepository;
 import com.grupo8.turnos_app.modules.users.entities.User;
@@ -36,6 +39,7 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentService {
 
   private final AppointmentRepository appointmentRepository;
+  private final BusinessRepository businessRepository;
   private final DepositRepository depositRepository;
   private final UserRepository userRepository;
 
@@ -43,24 +47,29 @@ public class AppointmentService {
 
   // returns all appointments for a business, paginated and filterable by status
   public Page<AppointmentResponse> getAppointmentsByBusiness(
-      Long businessId,
+      UUID businessId,
       AppointmentStatus status,
       Pageable pageable) {
 
+    Business business = businessRepository.findByPublicId(businessId)
+        .orElseThrow(() -> new NotFoundException("Business not found"));
+
     Page<Appointment> page = (status != null)
-        ? appointmentRepository.findByBusinessIdAndStatus(businessId, status, pageable)
-        : appointmentRepository.findByBusinessId(businessId, pageable);
+        ? appointmentRepository.findByBusinessIdAndStatus(business.getId(), status, pageable)
+        : appointmentRepository.findByBusinessId(business.getId(), pageable);
 
     return page.map(appointment -> AppointmentMapper.toResponse(appointment));
   }
 
   // returns today's appointments for the owner dashboard
-  public List<AppointmentResponse> getTodayAppointments(Long businessId) {
+  public List<AppointmentResponse> getTodayAppointments(UUID businessId) {
+    Business business = businessRepository.findByPublicId(businessId)
+        .orElseThrow(() -> new NotFoundException("Business not found"));
     LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
     LocalDateTime endOfDay = startOfDay.plusDays(1);
 
     return appointmentRepository
-        .findTodayAppointments(businessId, startOfDay, endOfDay)
+        .findTodayAppointments(business.getId(), startOfDay, endOfDay)
         .stream()
         .map(appointment -> AppointmentMapper.toResponse(appointment))
         .collect(java.util.stream.Collectors.toList());
@@ -68,12 +77,15 @@ public class AppointmentService {
 
   // returns future UNBOOKED slots for the public endpoint with optional filters
   public List<AppointmentResponse> getAvailableSlots(
-      Long businessId,
+      UUID businessId,
       Long serviceId,
       Long employeeId) {
 
+    Business business = businessRepository.findByPublicId(businessId)
+        .orElseThrow(() -> new NotFoundException("Business not found"));
+
     return appointmentRepository
-        .findAvailableSlots(businessId, LocalDateTime.now(), serviceId, employeeId)
+        .findAvailableSlots(business.getId(), LocalDateTime.now(), serviceId, employeeId)
         .stream()
         .map(appointment -> AppointmentMapper.toResponse(appointment))
         .collect(java.util.stream.Collectors.toList());
@@ -93,10 +105,14 @@ public class AppointmentService {
   // uses pessimistic lock to avoid double booking on concurrent requests
 
   @Transactional
-  public AppointmentResponse bookAppointment(Long appointmentId, BookAppointmentRequest request) {
+  public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest request) {
 
-    // fetch appointment with lock: blocks the row until the transaction ends
-    Appointment appointment = appointmentRepository.findByIdWithLock(appointmentId)
+    // step 1: resolver UUID al Long interno (sin lock)
+    Appointment ref = appointmentRepository.findByPublicId(publicId)
+        .orElseThrow(() -> new NotFoundException("Error al reservar: turno no encontrado."));
+
+    // step 2: re-fetch con lock pesimista usando el PK interno
+    Appointment appointment = appointmentRepository.findByIdWithLock(ref.getId())
         .orElseThrow(() -> new NotFoundException("Error al reservar: turno no encontrado."));
 
     // cjeck if slot is still available
@@ -160,9 +176,9 @@ public class AppointmentService {
   // CONFIRM DEPOSIT PAYMENT | /pay-deposit
 
   @Transactional
-  public AppointmentResponse confirmDepositPayment(Long appointmentId) {
+  public AppointmentResponse confirmDepositPayment(UUID publicId) {
 
-    Appointment appointment = appointmentRepository.findById(appointmentId)
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Error al confirmar el pago: turno no encontrado."));
 
     // Payment is only allowed when the appointment is waiting for it
@@ -171,7 +187,7 @@ public class AppointmentService {
           "Error al confirmar el pago: el turno no está esperando un pago.");
     }
 
-    Deposit deposit = depositRepository.findByAppointmentId(appointmentId)
+    Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
         .orElseThrow(() -> new NotFoundException("Error al confirmar el pago: seña no encontrada para este turno"));
 
     if (deposit.getStatus() != DepositStatus.PENDING) {
@@ -197,9 +213,9 @@ public class AppointmentService {
   // FORFEITED
 
   @Transactional
-  public AppointmentResponse cancelAppointment(Long appointmentId) {
+  public AppointmentResponse cancelAppointment(UUID publicId) {
 
-    Appointment appointment = appointmentRepository.findById(appointmentId)
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Error al cancelar el turno: turno no encontrado."));
 
     // only BOOKED or AWAITING_PAYMENT appointments can be cancelled
@@ -209,7 +225,7 @@ public class AppointmentService {
           "Error al cancelar el turno: el turno no puede ser cancelado en su estado actual.");
     }
 
-    Deposit deposit = depositRepository.findByAppointmentId(appointmentId)
+    Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
         .orElseThrow(() -> new NotFoundException("Error al cancelar el turno: seña no encontrada para este turno"));
 
     // calculate hours remaining until appointment start
@@ -239,9 +255,9 @@ public class AppointmentService {
   // business owner cancells booked appt: deposit is always refunded
 
   @Transactional
-  public AppointmentResponse suspendAppointment(Long appointmentId) {
+  public AppointmentResponse suspendAppointment(UUID publicId) {
 
-    Appointment appointment = appointmentRepository.findById(appointmentId)
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Error al suspender el turno: turno no encontrado."));
 
     if (appointment.getStatus() != AppointmentStatus.BOOKED) {
@@ -249,7 +265,7 @@ public class AppointmentService {
           "Error al suspender el turno: solo los turnos reservados pueden ser suspendidos.");
     }
 
-    Deposit deposit = depositRepository.findByAppointmentId(appointmentId)
+    Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
         .orElseThrow(() -> new NotFoundException("Error al suspender el turno: seña no encontrada para este turno."));
 
     deposit.setStatus(DepositStatus.REFUNDED);
@@ -267,9 +283,9 @@ public class AppointmentService {
   // IMPORTANT || only UNBOOKED appts with no deposit can be deleted
 
   @Transactional
-  public void deleteAppointment(Long appointmentId) {
+  public void deleteAppointment(UUID publicId) {
 
-    Appointment appointment = appointmentRepository.findById(appointmentId)
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Error al eliminar el turno: turno no encontrado."));
 
     // check status so only unbooked appts are able to be hard deleted

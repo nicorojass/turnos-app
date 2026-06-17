@@ -9,7 +9,7 @@ public class AppointmentScheduleMapper {
     public static AppointmentScheduleResponse toResponse(AppointmentSchedule schedule) {
         if (schedule == null) return null;
         return AppointmentScheduleResponse.builder()
-                .id(schedule.getId())
+                .id(schedule.getPublicId())
                 .dayNumber(schedule.getDayNumber())
                 .startTime(schedule.getStartTime())
                 .endTime(schedule.getEndTime())

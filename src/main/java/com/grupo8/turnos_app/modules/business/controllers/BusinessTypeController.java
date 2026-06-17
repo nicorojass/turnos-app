@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.business.controllers;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -38,12 +39,12 @@ public class BusinessTypeController {
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BusinessTypeResponse> updateBusinessType(@PathVariable Long id, @RequestBody @Valid BusinessTypeRequest request) {
+    public ResponseEntity<BusinessTypeResponse> updateBusinessType(@PathVariable UUID id, @RequestBody @Valid BusinessTypeRequest request) {
         return ResponseEntity.ok(businessTypeService.updateBusinessType(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> toggleBusinessTypeDeleted(@PathVariable Long id) {
+    public ResponseEntity<Void> toggleBusinessTypeDeleted(@PathVariable UUID id) {
         businessTypeService.toggleBusinessTypeDeleted(id);
         return ResponseEntity.noContent().build();
     }

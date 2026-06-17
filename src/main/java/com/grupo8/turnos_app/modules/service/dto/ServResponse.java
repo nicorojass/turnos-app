@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.service.dto;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,7 +16,7 @@ import lombok.Setter;
 @Builder
 public class ServResponse {
     
-    private Long id;
+    private UUID id;
     private String name;
     private Integer durationMinutes;
     private BigDecimal price;

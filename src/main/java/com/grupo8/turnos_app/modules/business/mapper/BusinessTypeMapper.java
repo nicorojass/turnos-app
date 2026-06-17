@@ -8,7 +8,7 @@ public class BusinessTypeMapper {
 
     public static BusinessTypeResponse toResponse(BusinessType businessType) {
         return BusinessTypeResponse.builder()
-                .id(businessType.getId())
+                .id(businessType.getPublicId())
                 .name(businessType.getName())
                 .deleted(businessType.getDeleted())
                 .build();

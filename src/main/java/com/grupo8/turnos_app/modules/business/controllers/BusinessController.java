@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.business.controllers;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +41,7 @@ public class BusinessController {
 }
 
     @GetMapping("/{id}")
-    public ResponseEntity<BusinessResponse> getBusiness(@PathVariable Long id) {
+    public ResponseEntity<BusinessResponse> getBusiness(@PathVariable UUID id) {
         return ResponseEntity.ok(businessService.getBusinessById(id));
     }
 
@@ -60,23 +61,23 @@ public class BusinessController {
 }
 
     @PutMapping("/{id}")
-    public ResponseEntity<BusinessResponse> updateBusiness(@PathVariable Long id, @RequestBody @Valid BusinessRequest request) {
+    public ResponseEntity<BusinessResponse> updateBusiness(@PathVariable UUID id, @RequestBody @Valid BusinessRequest request) {
         return ResponseEntity.ok(businessService.updateBusiness(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteBusiness(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteBusiness(@PathVariable UUID id) {
         businessService.deleteBusiness(id);
         return ResponseEntity.noContent().build();
     }
 
     @PostMapping("/{id}/types/{typeId}")
-    public ResponseEntity<BusinessResponse> addType(@PathVariable Long id, @PathVariable Long typeId) {
+    public ResponseEntity<BusinessResponse> addType(@PathVariable UUID id, @PathVariable UUID typeId) {
         return ResponseEntity.ok(businessService.addTypeToBusiness(id, typeId));
     }
 
     @DeleteMapping("/{id}/types/{typeId}")
-    public ResponseEntity<BusinessResponse> removeType(@PathVariable Long id, @PathVariable Long typeId) {
+    public ResponseEntity<BusinessResponse> removeType(@PathVariable UUID id, @PathVariable UUID typeId) {
         return ResponseEntity.ok(businessService.removeTypeFromBusiness(id, typeId));
     }
 

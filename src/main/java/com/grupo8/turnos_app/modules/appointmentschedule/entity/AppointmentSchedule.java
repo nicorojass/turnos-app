@@ -11,6 +11,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +21,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.time.LocalTime;
+import java.util.UUID;
 
 @Entity
 @Table(name = "appointment_schedules")
@@ -34,6 +36,9 @@ public class AppointmentSchedule {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
     @Column(name = "day_number")
     private Integer dayNumber;
 
@@ -44,6 +49,11 @@ public class AppointmentSchedule {
     private LocalTime endTime;
 
     private BigDecimal price;
+
+    @PrePersist
+    protected void onCreate() {
+        this.publicId = UUID.randomUUID();
+    }
 
     @ManyToOne
     @JoinColumn(name = "business_id")
