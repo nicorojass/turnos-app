@@ -4,6 +4,7 @@ package com.grupo8.turnos_app.modules.appointment.repository;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -63,4 +64,6 @@ boolean existsSlot(
     @Param("serviceId") Long serviceId,
     @Param("employeeId") Long employeeId,
     @Param("startDatetime") LocalDateTime startDatetime);
+
+  Optional<Appointment> findByPublicId(UUID publicId);
 }

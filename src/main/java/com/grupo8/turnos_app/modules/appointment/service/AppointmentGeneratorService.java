@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -28,15 +29,15 @@ public class AppointmentGeneratorService {
     private final BusinessRepository businessRepository;
 
     @Transactional
-    public void generateSlotsForBusiness(Long businessId) {
-        Business business = businessRepository.findById(businessId)
+    public void generateSlotsForBusiness(UUID businessId) {
+        Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
 
         Integer daysToCreate = business.getScheduleDaysToCreate();
         if (daysToCreate == null || daysToCreate <= 0)
             return;
 
-        List<AppointmentSchedule> schedules = appointmentScheduleRepository.findByBusinessId(businessId);
+        List<AppointmentSchedule> schedules = appointmentScheduleRepository.findByBusinessId(business.getId());
         if (schedules.isEmpty())
             return;
 

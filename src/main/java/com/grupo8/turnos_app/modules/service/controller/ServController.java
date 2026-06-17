@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.service.controller;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,23 +30,23 @@ public class ServController {
 
     @PostMapping
     public ResponseEntity<ServResponse> createService(
-        @PathVariable Long businessId,
+        @PathVariable UUID businessId,
         @Valid @RequestBody ServRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(service.createService(businessId, request));
     }
 
     @GetMapping
-    public ResponseEntity<List<ServResponse>> getServicesByBusinessId(@PathVariable Long businessId) {
+    public ResponseEntity<List<ServResponse>> getServicesByBusinessId(@PathVariable UUID businessId) {
         return ResponseEntity.ok(service.getServicesByBusinessId(businessId));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<ServResponse> editService(@PathVariable Long id,@Valid @RequestBody ServRequest request) {
+    public ResponseEntity<ServResponse> editService(@PathVariable UUID id,@Valid @RequestBody ServRequest request) {
         return ResponseEntity.ok(service.editService(id, request));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> deleteService(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteService(@PathVariable UUID id) {
         service.deleteService(id);
         return ResponseEntity.noContent().build();
     }

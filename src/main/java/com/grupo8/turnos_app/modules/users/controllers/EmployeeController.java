@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.users.controllers;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -30,13 +31,13 @@ public class EmployeeController {
     private final EmployeeService employeeService;
 
     @GetMapping("/businesses/{businessId}/employees")
-    public ResponseEntity<List<UserResponse>> getEmployees(@PathVariable Long businessId) {
+    public ResponseEntity<List<UserResponse>> getEmployees(@PathVariable UUID businessId) {
         return ResponseEntity.ok(employeeService.getEmployeesByBusiness(businessId));
     }
 
     @PostMapping("/businesses/{businessId}/employees")
     public ResponseEntity<UserResponse> createEmployee(
-            @PathVariable Long businessId,
+            @PathVariable UUID businessId,
             @RequestBody @Valid EmployeeRequest request,
             @AuthenticationPrincipal UserDetails userDetails) {
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -44,18 +45,18 @@ public class EmployeeController {
     }
 
     @GetMapping("/employees/{id}")
-    public ResponseEntity<UserResponse> getEmployee(@PathVariable Long id) {
+    public ResponseEntity<UserResponse> getEmployee(@PathVariable UUID id) {
         return ResponseEntity.ok(employeeService.getEmployee(id));
     }
 
     @PutMapping("/employees/{id}")
-    public ResponseEntity<UserResponse> updateEmployee(@PathVariable Long id,
+    public ResponseEntity<UserResponse> updateEmployee(@PathVariable UUID id,
             @RequestBody @Valid EmployeeRequest request) {
         return ResponseEntity.ok(employeeService.updateEmployee(id, request));
     }
 
     @DeleteMapping("/employees/{id}")
-    public ResponseEntity<Void> removeEmployee(@PathVariable Long id) {
+    public ResponseEntity<Void> removeEmployee(@PathVariable UUID id) {
         employeeService.removeEmployee(id);
         return ResponseEntity.noContent().build();
     }

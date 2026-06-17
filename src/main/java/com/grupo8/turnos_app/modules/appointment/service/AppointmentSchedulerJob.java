@@ -21,7 +21,7 @@ public class AppointmentSchedulerJob {
     public void generateDailySlots() {
         List<Business> businesses = businessRepository.findAll();
         for (Business business : businesses) {
-            appointmentGeneratorService.generateSlotsForBusiness(business.getId());
+            appointmentGeneratorService.generateSlotsForBusiness(business.getPublicId());
         }
     }
 }

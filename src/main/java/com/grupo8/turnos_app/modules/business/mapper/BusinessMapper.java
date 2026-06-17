@@ -11,7 +11,7 @@ public class BusinessMapper {
 
     public static BusinessResponse toResponse(Business business) {
         return BusinessResponse.builder()
-                .id(business.getId())
+                .id(business.getPublicId())
                 .name(business.getName())
                 .email(business.getEmail())
                 .slug(business.getSlug())
@@ -21,7 +21,7 @@ public class BusinessMapper {
                 .scheduleEnd(business.getScheduleEnd())
                 .scheduleDaysToCreate(business.getScheduleDaysToCreate())
                 .scheduleAnticipation(business.getScheduleAnticipation())
-                .active(business.getActive())
+                .deleted(business.getDeleted())
                 .ownerId(business.getOwner().getId())
                 .businessTypes(
                     business.getBusinessTypes() == null ? Collections.emptyList() :

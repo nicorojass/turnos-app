@@ -2,6 +2,8 @@ package com.grupo8.turnos_app.modules.appointmentschedule.repository;
 
 import java.time.LocalTime;
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -33,5 +35,5 @@ boolean existsConflictingSchedule(
     @Param("excludeId") Long excludeId
 );
 
-
+    Optional<AppointmentSchedule> findByPublicId(UUID publicId);
 }

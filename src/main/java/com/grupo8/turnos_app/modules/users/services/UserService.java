@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.users.services;
 
 import java.util.List;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
@@ -24,8 +25,8 @@ public class UserService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
 
-    public UserResponse getUserById(Long id) {
-        return userRepository.findById(id)
+    public UserResponse getUserById(UUID publicId) {
+        return userRepository.findByPublicId(publicId)
                 .map(UserMapper::toResponse)
                 .orElseThrow(() -> new NotFoundException("User not found"));
     }
@@ -37,22 +38,22 @@ public class UserService {
                 .toList();
     }
 
-    public UserResponse toggleUserActive(Long id) {
-        User user = userRepository.findById(id)
+    public UserResponse toggleUserActive(UUID publicId) {
+        User user = userRepository.findByPublicId(publicId)
             .orElseThrow(() -> new NotFoundException("User not found"));
         user.setActive(!user.getActive());
         userRepository.save(user);
             return UserMapper.toResponse(user);
     }
 
-    public void forceDeleteUser(Long id) {
-        if (!userRepository.existsById(id))
-            throw new NotFoundException("User not found");
-        userRepository.deleteById(id);
+    public void forceDeleteUser(UUID publicId) {
+        User user = userRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new NotFoundException("User not found"));
+        userRepository.delete(user);
     }
 
-    public UserResponse updateUserRoles(Long id, Set<RoleName> roleNames) {
-        User user = userRepository.findById(id)
+    public UserResponse updateUserRoles(UUID publicId, Set<RoleName> roleNames) {
+        User user = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
         Set<Role> roles = roleNames.stream()

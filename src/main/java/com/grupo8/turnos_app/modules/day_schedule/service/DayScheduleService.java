@@ -3,6 +3,7 @@ package com.grupo8.turnos_app.modules.day_schedule.service;
 import java.time.LocalTime;
 import java.util.Arrays;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
@@ -48,9 +49,10 @@ public class DayScheduleService {
   }
 
   // get schedule by businessId
-  public List<DayScheduleResponse> getScheduleByBusiness(Long businessId) {
-    checkBusinessExists(businessId);
-    return dayScheduleRepository.findAllByBusinessId(businessId)
+  public List<DayScheduleResponse> getScheduleByBusiness(UUID businessId) {
+    Business business = businessRepository.findByPublicId(businessId)
+        .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+    return dayScheduleRepository.findAllByBusinessId(business.getId())
         .stream()
         .map(DayScheduleMapper::toResponse)
         .toList();
@@ -59,12 +61,13 @@ public class DayScheduleService {
   // Replaces the full weekly schedule. Each item in the list is updated by day.
   // If a day is missing from the list it stays untouched in the DB.
   @Transactional
-  public List<DayScheduleResponse> updateFullSchedule(Long businessId,
+  public List<DayScheduleResponse> updateFullSchedule(UUID businessId,
       List<DayScheduleUpdateRequest> requests) {
-    checkBusinessExists(businessId);
+    Business business = businessRepository.findByPublicId(businessId)
+        .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
 
     return requests.stream()
-        .map(req -> updateDay(businessId, req))
+        .map(req -> updateDay(business.getId(), req))
         .toList();
   }
 
@@ -99,12 +102,4 @@ public class DayScheduleService {
     return DayScheduleMapper.toResponse(dayScheduleRepository.save(daySchedule));
   }
 
-  // Helper
-
-  // throws if the business does not exist. used to validate existence before any
-  // operation.
-  private void checkBusinessExists(Long businessId) {
-    if (!businessRepository.existsById(businessId))
-      throw new BusinessNotFoundException("Business not found");
-  }
 }

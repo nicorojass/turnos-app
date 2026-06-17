@@ -3,6 +3,7 @@ package com.grupo8.turnos_app.modules.appointmentschedule.service;
 import java.time.Duration;
 import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
@@ -34,15 +35,17 @@ public class AppointmentScheduleService {
     private final UserRepository userRepository;
     private final AppointmentGeneratorService appointmentGeneratorService;
 
-    public List<AppointmentScheduleResponse> getByBusiness(Long businessId) {
-        return appointmentScheduleRepository.findByBusinessId(businessId)
+    public List<AppointmentScheduleResponse> getByBusiness(UUID businessId) {
+        Business business = businessRepository.findByPublicId(businessId)
+                .orElseThrow(() -> new NotFoundException("Business not found"));
+        return appointmentScheduleRepository.findByBusinessId(business.getId())
                 .stream()
                 .map(AppointmentScheduleMapper::toResponse)
                 .toList();
     }
 
-public AppointmentScheduleResponse create(Long businessId, AppointmentScheduleRequest request) {
-    Business business = businessRepository.findById(businessId)
+public AppointmentScheduleResponse create(UUID businessId, AppointmentScheduleRequest request) {
+    Business business = businessRepository.findByPublicId(businessId)
             .orElseThrow(() -> new NotFoundException("Business not found"));
 
     Serv service = servRepository.findById(request.getServiceId())
@@ -60,7 +63,7 @@ public AppointmentScheduleResponse create(Long businessId, AppointmentScheduleRe
     }
 
     if (appointmentScheduleRepository.existsConflictingSchedule(
-            businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime(),
+            business.getId(), request.getDayNumber(), request.getStartTime(), request.getEndTime(),
             request.getEmployeeId(), null)) {
         throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day, time and employee");
     }
@@ -87,14 +90,16 @@ public AppointmentScheduleResponse create(Long businessId, AppointmentScheduleRe
     return AppointmentScheduleMapper.toResponse(saved);
 }
 
-    public void delete(Long id) {
-        AppointmentSchedule schedule = appointmentScheduleRepository.findById(id)
+    public void delete(UUID publicId) {
+        AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Appointment schedule not found"));
         appointmentScheduleRepository.delete(schedule);
     }
 
-    public AppointmentScheduleResponse update(Long businessId, Long id, AppointmentScheduleRequest request) {
-    AppointmentSchedule schedule = appointmentScheduleRepository.findById(id)
+    public AppointmentScheduleResponse update(UUID businessId, UUID publicId, AppointmentScheduleRequest request) {
+    Business business = businessRepository.findByPublicId(businessId)
+            .orElseThrow(() -> new NotFoundException("Business not found"));
+    AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
             .orElseThrow(() -> new NotFoundException("Appointment schedule not found"));
 
     Serv service = servRepository.findById(request.getServiceId())
@@ -107,8 +112,8 @@ public AppointmentScheduleResponse create(Long businessId, AppointmentScheduleRe
     }
 
     if (appointmentScheduleRepository.existsConflictingSchedule(
-        businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime(),
-        request.getEmployeeId(), id)) {
+        business.getId(), request.getDayNumber(), request.getStartTime(), request.getEndTime(),
+        request.getEmployeeId(), schedule.getId())) {
     throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day, time and employee");
         }
     schedule.setDayNumber(request.getDayNumber());

@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.users.services;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -31,16 +32,16 @@ public class EmployeeService {
     private final BusinessRepository businessRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public List<UserResponse> getEmployeesByBusiness(Long businessId) {
-        Business business = businessRepository.findById(businessId)
+    public List<UserResponse> getEmployeesByBusiness(UUID businessId) {
+        Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
         return business.getEmployees().stream()
                 .map(UserMapper::toResponse)
                 .toList();
     }
 
-    public UserResponse createEmployee(Long businessId, EmployeeRequest request, String ownerEmail) {
-        Business business = businessRepository.findById(businessId)
+    public UserResponse createEmployee(UUID businessId, EmployeeRequest request, String ownerEmail) {
+        Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
 
         User owner = userRepository.findByEmail(ownerEmail)
@@ -69,8 +70,8 @@ public class EmployeeService {
         return UserMapper.toResponse(savedEmployee);
     }
 
-    public UserResponse getEmployee(Long id) {
-    User employee = userRepository.findById(id)
+    public UserResponse getEmployee(UUID publicId) {
+    User employee = userRepository.findByPublicId(publicId)
             .orElseThrow(() -> new NotFoundException("Employee not found"));
 
     if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
@@ -80,8 +81,8 @@ public class EmployeeService {
         return UserMapper.toResponse(employee);
     }
 
-    public UserResponse updateEmployee(Long id, EmployeeRequest request) {
-        User employee = userRepository.findById(id)
+    public UserResponse updateEmployee(UUID publicId, EmployeeRequest request) {
+        User employee = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Employee not found"));
                 
         if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
@@ -95,8 +96,8 @@ public class EmployeeService {
         return UserMapper.toResponse(userRepository.save(employee));
     }
 
-    public void removeEmployee(Long id) {
-        User employee = userRepository.findById(id)
+    public void removeEmployee(UUID publicId) {
+        User employee = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Employee not found"));
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
@@ -105,7 +106,7 @@ public class EmployeeService {
         employee.getRoles().remove(employeeRole);
         userRepository.save(employee);
 
-        List<Business> businesses = businessRepository.findByEmployees_Id(id);
+        List<Business> businesses = businessRepository.findByEmployees_Id(employee.getId());
         for (Business b : businesses) {
             b.getEmployees().remove(employee);
             businessRepository.save(b);

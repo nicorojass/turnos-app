@@ -3,6 +3,7 @@ package com.grupo8.turnos_app.modules.business.entities;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.modules.users.entities.User;
 
@@ -36,6 +37,9 @@ public class Business {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
     @Column(nullable = false)
     private String name;
 
@@ -58,11 +62,12 @@ public class Business {
 
     private Integer scheduleAnticipation;
 
-    private Boolean active;
+    private Boolean deleted;
 
     @PrePersist
     protected void OnCreate() {
-        active = true;
+        this.deleted = false;
+        this.publicId = UUID.randomUUID();
     }
 
     @OneToOne(fetch = FetchType.LAZY)

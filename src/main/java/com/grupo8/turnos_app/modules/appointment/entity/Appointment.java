@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.appointment.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.modules.business.entities.Business;
@@ -23,6 +24,9 @@ public class Appointment {
   @Id
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
+
+  @Column(nullable = false, unique = true, updatable = false)
+  private UUID publicId;
 
   @Column(name = "start_datetime", nullable = false)
   private LocalDateTime startDatetime;
@@ -58,6 +62,7 @@ public class Appointment {
   @PrePersist
   protected void onCreate() {
     this.createdAt = LocalDateTime.now();
+    this.publicId = UUID.randomUUID();
     if (this.status == null) {
       this.status = AppointmentStatus.UNBOOKED;
     }
@@ -82,8 +87,6 @@ public class Appointment {
   @JoinColumn(name = "client_user_id")
   private User clientUser;
 
-  @OneToOne(mappedBy = "appointment", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
-  // cascade added only for delete appointment function, so associated deposit
-  // also deletes
+  @OneToOne(mappedBy = "appointment", fetch = FetchType.LAZY)
   private Deposit deposit;
 }

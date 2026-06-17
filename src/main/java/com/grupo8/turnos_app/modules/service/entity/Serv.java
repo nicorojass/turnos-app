@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.service.entity;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.modules.business.entities.Business;
 
@@ -11,6 +12,7 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
@@ -33,6 +35,9 @@ public class Serv {
     @GeneratedValue(strategy=GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
     @NotBlank
     private String name;
 
@@ -45,6 +50,11 @@ public class Serv {
     @Positive
     @Column(name="duration_minutes")
     private Integer durationMinutes;
+
+    @PrePersist
+    protected void onCreate() {
+        this.publicId = UUID.randomUUID();
+    }
 
     @ManyToOne
     @JoinColumn(name="business_id", nullable=false)

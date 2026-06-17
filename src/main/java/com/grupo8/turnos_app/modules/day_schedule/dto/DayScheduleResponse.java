@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.day_schedule.dto;
 
 import java.time.LocalTime;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.common.enums.DayOfWeek;
 
@@ -16,7 +17,7 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class DayScheduleResponse {
-    private Long id;
+    private UUID id;
     private DayOfWeek day;
     private LocalTime dayStart;
     private LocalTime dayEnd;
