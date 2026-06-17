@@ -19,7 +19,9 @@ import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.entity.Appointment;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentNotAvailableException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidPriceException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.NoServiceException;
 import com.grupo8.turnos_app.modules.appointment.mapper.AppointmentMapper;
 import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
 import com.grupo8.turnos_app.modules.deposit.entity.Deposit;
@@ -107,7 +109,7 @@ public class AppointmentService {
     User clientUser = null;
     if (request.getClientUserId() != null) {
       clientUser = userRepository.findById(request.getClientUserId())
-          .orElseThrow(() -> new NotFoundException("Client user not found"));
+          .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
     }
 
     // set appointment's client data
@@ -117,11 +119,24 @@ public class AppointmentService {
     appointment.setClientUser(clientUser);
     appointment.setStatus(AppointmentStatus.AWAITING_PAYMENT);
 
-    // calculate deposit amount: price * percentage / 100
+    // validate that appointment has price and service set
+    if (appointment.getPrice() == null || appointment.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+      throw new InvalidPriceException("Appointment has invalid price: " + appointment.getPrice());
+    }
+
+    if (appointment.getService() == null) {
+      throw new NoServiceException("Appointment has no associated service");
+    }
+
+    // validate outofrange / null percentage: default deposit is set to 30%
     BigDecimal depositPercentage = appointment.getService().getDepositPorcentage();
-    if (depositPercentage == null) {
+    if (depositPercentage == null
+        || depositPercentage.compareTo(BigDecimal.ZERO) <= 0
+        || depositPercentage.compareTo(new BigDecimal("100")) > 0) {
       depositPercentage = new BigDecimal("30.00");
     }
+
+    // calculate deposit amount: price * percentage / 100
     BigDecimal depositAmount = appointment.getPrice()
         .multiply(depositPercentage)
         .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
@@ -177,7 +192,8 @@ public class AppointmentService {
     return AppointmentMapper.toResponse(appointment);
   }
 
-  // CANCEL APPOINTMENT (requested by client user) | /cancel
+  // (requested by client user)
+  // CANCEL APPOINTMENT | /cancel
   // >= 24hs till appt makes deposit REFUNDED | < 24hs till appt makes deposit
   // FORFEITED
 
@@ -219,6 +235,7 @@ public class AppointmentService {
     return AppointmentMapper.toResponse(appointment);
   }
 
+  // (requested by business owner)
   // SUSPEND APPOINTMENT | /suspend
   // business owner cancells booked appt: deposit is always refunded
 

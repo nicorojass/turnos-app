@@ -25,6 +25,7 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "day_schedules", uniqueConstraints = {
+    // prevent business_id + day combination duplicates
         @UniqueConstraint(name = "uk_day_schedule_business_day", columnNames = { "business_id", "day" })
 })
 @Getter
