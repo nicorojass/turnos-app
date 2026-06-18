@@ -54,13 +54,16 @@ public class Business {
 
     private String description;
 
-    private Boolean automaticSchedule;
+    @Builder.Default
+    private Boolean automaticSchedule = false;
 
     private LocalDateTime scheduleEnd;
 
-    private Integer scheduleDaysToCreate;
+    @Builder.Default
+    private Integer scheduleDaysToCreate = 30;
 
-    private Integer scheduleAnticipation;
+    @Builder.Default
+    private Integer scheduleAnticipation = 5;
 
     private Boolean deleted;
 

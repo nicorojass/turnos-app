@@ -18,4 +18,5 @@ public interface BusinessRepository extends JpaRepository<Business, Long> {
     List<Business> findByEmployees_Id(Long userId);
     Optional<Business> findByOwnerId(Long ownerId);
     Optional<Business> findByPublicId(UUID publicId);
+    List<Business> findAllByAutomaticScheduleTrueAndDeletedFalse();
 }

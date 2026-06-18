@@ -17,6 +17,7 @@ import com.grupo8.turnos_app.modules.business.exceptions.OwnerNotFoundException;
 import com.grupo8.turnos_app.modules.business.mapper.BusinessMapper;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessTypeRepository;
+import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.day_schedule.service.DayScheduleService;
 import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
@@ -31,35 +32,36 @@ public class BusinessService {
     private final UserRepository userRepository;
     private final BusinessTypeRepository businessTypeRepository;
     private final DayScheduleService dayScheduleService;
+    private final AgendaGeneratorService agendaGeneratorService;
 
     public BusinessResponse createBusiness(String ownerEmail, BusinessRequest request) {
 
-    if (businessRepository.existsByEmail(request.getEmail()))
-        throw new BusinessAlreadyExistsException("A business with that email already exists");
-    if (businessRepository.existsBySlug(request.getSlug()))
-        throw new BusinessAlreadyExistsException("A business with that slug already exists");
-    if (businessRepository.existsByPhone(request.getPhone()))
-        throw new BusinessAlreadyExistsException("A business with that phone already exists");
+        if (businessRepository.existsByEmail(request.getEmail()))
+            throw new BusinessAlreadyExistsException("A business with that email already exists");
+        if (businessRepository.existsBySlug(request.getSlug()))
+            throw new BusinessAlreadyExistsException("A business with that slug already exists");
+        if (businessRepository.existsByPhone(request.getPhone()))
+            throw new BusinessAlreadyExistsException("A business with that phone already exists");
 
-    User owner = userRepository.findByEmail(ownerEmail)
-            .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
+        User owner = userRepository.findByEmail(ownerEmail)
+                .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
 
-    if (businessRepository.findByOwnerId(owner.getId()).isPresent())
-        throw new BusinessAlreadyExistsException("This owner already has a business");
+        if (businessRepository.findByOwnerId(owner.getId()).isPresent())
+            throw new BusinessAlreadyExistsException("This owner already has a business");
 
-    Business business = BusinessMapper.toEntity(request);
-    business.setOwner(owner);
+        Business business = BusinessMapper.toEntity(request);
+        business.setOwner(owner);
 
-    if (request.getTypeIds() != null && !request.getTypeIds().isEmpty()) {
-        List<BusinessType> types = businessTypeRepository.findAllById(request.getTypeIds());
-        business.setBusinessTypes(types);
+        if (request.getTypeIds() != null && !request.getTypeIds().isEmpty()) {
+            List<BusinessType> types = businessTypeRepository.findAllById(request.getTypeIds());
+            business.setBusinessTypes(types);
+        }
+
+        Business savedBusiness = businessRepository.save(business);
+        dayScheduleService.initializeScheduleForBusiness(savedBusiness);
+
+        return BusinessMapper.toResponse(savedBusiness);
     }
-
-    Business savedBusiness = businessRepository.save(business);
-    dayScheduleService.initializeScheduleForBusiness(savedBusiness);
-
-    return BusinessMapper.toResponse(savedBusiness);
-}
 
     public BusinessResponse getBusinessById(UUID publicId) {
         return businessRepository.findByPublicId(publicId)
@@ -82,7 +84,12 @@ public class BusinessService {
 
     public BusinessResponse updateBusiness(UUID publicId, BusinessRequest request) {
         Business business = businessRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+
+        // if activating automatic schedule, reset schedule end to trigger regeneration
+        // from today
+        boolean activatingSchedule = !Boolean.TRUE.equals(business.getAutomaticSchedule())
+                && Boolean.TRUE.equals(request.getAutomaticSchedule());
 
         business.setName(request.getName());
         business.setEmail(request.getEmail());
@@ -90,29 +97,34 @@ public class BusinessService {
         business.setPhone(request.getPhone());
         business.setDescription(request.getDescription());
         business.setAutomaticSchedule(request.getAutomaticSchedule());
-        business.setScheduleEnd(request.getScheduleEnd());
+        business.setScheduleEnd(activatingSchedule ? null : request.getScheduleEnd());
         business.setScheduleDaysToCreate(request.getScheduleDaysToCreate());
         business.setScheduleAnticipation(request.getScheduleAnticipation());
-        
 
         if (request.getTypeIds() != null) {
-        List<BusinessType> types = businessTypeRepository.findAllById(request.getTypeIds());
-        business.setBusinessTypes(types);
+            List<BusinessType> types = businessTypeRepository.findAllById(request.getTypeIds());
+            business.setBusinessTypes(types);
         }
-        
-        return BusinessMapper.toResponse(businessRepository.save(business));
+
+        Business saved = businessRepository.save(business);
+
+        if (activatingSchedule) {
+            agendaGeneratorService.runAutomation(saved);
+        }
+
+        return BusinessMapper.toResponse(saved);
     }
 
     public void deleteBusiness(UUID publicId) {
         Business business = businessRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
         business.setDeleted(true);
         businessRepository.save(business);
     }
 
     public void forceDeleteBusiness(UUID publicId) {
         Business business = businessRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
         businessRepository.delete(business);
     }
 
@@ -143,10 +155,10 @@ public class BusinessService {
 
     public BusinessResponse getMyBusiness(String email) {
         User owner = userRepository.findByEmail(email)
-            .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
+                .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
         return businessRepository.findByOwner_Id(owner.getId())
-            .map(BusinessMapper::toResponse)
-            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
-}
+                .map(BusinessMapper::toResponse)
+                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+    }
 
 }

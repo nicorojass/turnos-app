@@ -1,14 +1,13 @@
 package com.grupo8.turnos_app.modules.appointmentschedule.service;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.exception.NotFoundException;
-import com.grupo8.turnos_app.modules.appointment.service.AppointmentGeneratorService;
+import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleRequest;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleResponse;
 import com.grupo8.turnos_app.modules.appointmentschedule.entity.AppointmentSchedule;
@@ -33,7 +32,7 @@ public class AppointmentScheduleService {
     private final BusinessRepository businessRepository;
     private final ServRepository servRepository;
     private final UserRepository userRepository;
-    private final AppointmentGeneratorService appointmentGeneratorService;
+    private final AgendaGeneratorService agendaGeneratorService;
 
     public List<AppointmentScheduleResponse> getByBusiness(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
@@ -76,16 +75,7 @@ public AppointmentScheduleResponse create(UUID businessId, AppointmentScheduleRe
 
     AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
 
-    LocalDate today = LocalDate.now();
-    Integer daysToCreate = business.getScheduleDaysToCreate();
-    if (daysToCreate != null) {
-        for (int i = 0; i < daysToCreate; i++) {
-            LocalDate date = today.plusDays(i);
-            if (date.getDayOfWeek().getValue() % 7 == saved.getDayNumber()) {
-                appointmentGeneratorService.generateSlotsForSchedule(business, saved, date);
-            }
-        }
-    }
+    agendaGeneratorService.generateFromToday(business);
 
     return AppointmentScheduleMapper.toResponse(saved);
 }
