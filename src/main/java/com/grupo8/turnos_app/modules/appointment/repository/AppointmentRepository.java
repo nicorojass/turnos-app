@@ -90,4 +90,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
   @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
     "AND a.status = 'AWAITING_PAYMENT'")
   boolean hasUnpaidByUser(@Param("userId") Long userId);
+
+  @Query("SELECT a FROM Appointment a WHERE a.status = 'AWAITING_PAYMENT' " +
+    "AND a.reservedAt < :expiry")
+  List<Appointment> findExpiredReservations(@Param("expiry") LocalDateTime expiry);
 }

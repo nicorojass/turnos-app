@@ -122,6 +122,11 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
         throw new AppointmentNotAvailableException("El turno ya no está disponible.");
     }
 
+    // check if business is active
+    if (Boolean.TRUE.equals(appointment.getBusiness().getDeleted())) {
+      throw new NotFoundException("El negocio no está disponible.");
+    }
+
     // validate that appointment has price and service set
     if (appointment.getPrice() == null || appointment.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
         throw new InvalidPriceException("Error al reservar: El precio del turno es inválido.");
@@ -282,7 +287,7 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
       appointment.setDeposit(deposit);
       return AppointmentMapper.toResponse(appointment);
     }
-    
+
     if (hoursUntilAppointment >= 24) {
       // early cancelation: deposit is returned to the client
       deposit.setStatus(DepositStatus.REFUNDED);
