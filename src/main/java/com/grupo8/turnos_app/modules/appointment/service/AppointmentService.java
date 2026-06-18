@@ -19,6 +19,7 @@ import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.entity.Appointment;
+import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentConflictException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentNotAvailableException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidPriceException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusException;
@@ -128,6 +129,12 @@ public class AppointmentService {
           .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
     }
 
+    // check for overlapping appointments
+    if (clientUser != null && appointmentRepository.hasOverlappingAppointment(
+        clientUser.getId(), appointment.getStartDatetime(), appointment.getEndDatetime())) {
+    throw new AppointmentConflictException("You already have an appointment at this time");
+    }
+    
     // set appointment's client data
     appointment.setClientName(request.getClientName());
     appointment.setClientEmail(request.getClientEmail());

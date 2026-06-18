@@ -8,6 +8,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.enums.RoleName;
+import com.grupo8.turnos_app.common.exception.EmailAlreadyInUseException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
 import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
@@ -62,6 +63,9 @@ public class UserService {
                 businessRepository.save(business);
             });
         }
+    } else {
+        if (userRepository.existsByEmailAndActiveTrue(user.getEmail()))
+            throw new EmailAlreadyInUseException("An active account already exists with this email");
     }
 
     user.setActive(!user.getActive());

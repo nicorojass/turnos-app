@@ -74,4 +74,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
   @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.business.id = :businessId " +
     "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT')")
     boolean hasPendingAppointmentsByBusiness(@Param("businessId") Long businessId);
+
+    @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
+    "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT') " +
+    "AND a.startDatetime < :endDatetime AND a.endDatetime > :startDatetime")
+boolean hasOverlappingAppointment(
+    @Param("userId") Long userId,
+    @Param("startDatetime") LocalDateTime startDatetime,
+    @Param("endDatetime") LocalDateTime endDatetime);
 }
