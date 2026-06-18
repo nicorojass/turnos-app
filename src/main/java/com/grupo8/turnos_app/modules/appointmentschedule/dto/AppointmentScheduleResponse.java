@@ -22,7 +22,7 @@ public class AppointmentScheduleResponse {
     private LocalTime startTime;
     private LocalTime endTime;
     private BigDecimal price;
-    private Long businessId;
-    private Long serviceId;
-    private Long employeeId;
+    private UUID businessId;
+    private UUID serviceId;
+    private UUID employeeId;
 }
