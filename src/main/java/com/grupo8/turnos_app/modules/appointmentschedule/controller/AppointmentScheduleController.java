@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.grupo8.turnos_app.modules.appointment.service.AppointmentGeneratorService;
+import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleRequest;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleResponse;
 import com.grupo8.turnos_app.modules.appointmentschedule.service.AppointmentScheduleService;
@@ -28,7 +28,7 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentScheduleController {
 
     private final AppointmentScheduleService appointmentScheduleService;
-    private final AppointmentGeneratorService appointmentGeneratorService;
+    private final AgendaGeneratorService agendaGeneratorService;
 
     @GetMapping
     public ResponseEntity<List<AppointmentScheduleResponse>> getByBusiness(@PathVariable UUID businessId) {
@@ -44,7 +44,7 @@ public class AppointmentScheduleController {
 
     @PostMapping("/generate")
     public ResponseEntity<Void> generateSlots(@PathVariable UUID businessId) {
-        appointmentGeneratorService.generateSlotsForBusiness(businessId);
+        agendaGeneratorService.generateFromToday(businessId);
         return ResponseEntity.ok().build();
     }
 

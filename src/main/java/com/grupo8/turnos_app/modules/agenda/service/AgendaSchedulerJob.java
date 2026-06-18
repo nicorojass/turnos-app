@@ -1,4 +1,4 @@
-package com.grupo8.turnos_app.modules.appointment.service;
+package com.grupo8.turnos_app.modules.agenda.service;
 
 import java.util.List;
 
@@ -12,16 +12,16 @@ import lombok.RequiredArgsConstructor;
 
 @Component
 @RequiredArgsConstructor
-public class AppointmentSchedulerJob {
+public class AgendaSchedulerJob {
 
     private final BusinessRepository businessRepository;
-    private final AppointmentGeneratorService appointmentGeneratorService;
+    private final AgendaGeneratorService agendaGeneratorService;
 
-    @Scheduled(cron = "0 0 1 * * *") // todos los días a la 01:00
+    @Scheduled(cron = "0 0 2 * * *") // daily triggered at 02am
     public void generateDailySlots() {
-        List<Business> businesses = businessRepository.findAll();
+        List<Business> businesses = businessRepository.findAllByAutomaticScheduleTrueAndDeletedFalse();
         for (Business business : businesses) {
-            appointmentGeneratorService.generateSlotsForBusiness(business.getPublicId());
+            agendaGeneratorService.runAutomation(business);
         }
     }
 }
