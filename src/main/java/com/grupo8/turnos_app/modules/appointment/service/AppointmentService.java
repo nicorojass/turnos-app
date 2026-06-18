@@ -10,6 +10,7 @@ import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -106,7 +107,7 @@ public class AppointmentService {
   // uses pessimistic lock to avoid double booking on concurrent requests
 
   @Transactional
-  public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest request) {
+public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest request, Authentication authentication) {
 
     // step 1: resolver UUID al Long interno (sin lock)
     Appointment ref = appointmentRepository.findByPublicId(publicId)
@@ -116,69 +117,84 @@ public class AppointmentService {
     Appointment appointment = appointmentRepository.findByIdWithLock(ref.getId())
         .orElseThrow(() -> new NotFoundException("Error al reservar: turno no encontrado."));
 
-    // cjeck if slot is still available
+    // check if slot is still available
     if (appointment.getStatus() != AppointmentStatus.UNBOOKED) {
-      throw new AppointmentNotAvailableException(
-          "El turno ya no está disponible.");
+        throw new AppointmentNotAvailableException("El turno ya no está disponible.");
     }
-
-    // load the registered client if id was provided
-    User clientUser = null;
-    if (request.getClientUserId() != null) {
-      clientUser = userRepository.findById(request.getClientUserId())
-          .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
-    }
-
-    // check for overlapping appointments
-    if (clientUser != null && appointmentRepository.hasOverlappingAppointment(
-        clientUser.getId(), appointment.getStartDatetime(), appointment.getEndDatetime())) {
-    throw new AppointmentConflictException("You already have an appointment at this time");
-    }
-    
-    // set appointment's client data
-    appointment.setClientName(request.getClientName());
-    appointment.setClientEmail(request.getClientEmail());
-    appointment.setClientPhone(request.getClientPhone());
-    appointment.setClientUser(clientUser);
-    appointment.setStatus(AppointmentStatus.AWAITING_PAYMENT);
 
     // validate that appointment has price and service set
     if (appointment.getPrice() == null || appointment.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-      throw new InvalidPriceException("Error al reservar: El precio del turno es inválido.");
+        throw new InvalidPriceException("Error al reservar: El precio del turno es inválido.");
     }
 
     if (appointment.getService() == null) {
-      throw new NoServiceException("Error al reservar: El turno no tiene un servicio asociado.");
+        throw new NoServiceException("Error al reservar: El turno no tiene un servicio asociado.");
     }
+
+    User clientUser = null;
+    if (authentication != null && authentication.isAuthenticated()) {
+        clientUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
+        appointment.setClientName(clientUser.getName());
+        appointment.setClientEmail(clientUser.getEmail());
+    } else {
+        if (request.getClientName() == null || request.getClientEmail() == null) {
+            throw new IllegalArgumentException("Name and email are required for unauthenticated bookings");
+        }
+        appointment.setClientName(request.getClientName());
+        appointment.setClientEmail(request.getClientEmail());
+        appointment.setClientPhone(request.getClientPhone());
+    }
+    appointment.setClientUser(clientUser);
+
+    // check for overlapping appointments
+    if (clientUser != null && appointmentRepository.hasOverlappingAppointment(
+            clientUser.getId(), appointment.getStartDatetime(), appointment.getEndDatetime())) {
+        throw new AppointmentConflictException("You already have an appointment at this time");
+    }
+
+    // anti-spam: no se puede reservar si ya tenés un turno pendiente de pago
+  if (clientUser != null) {
+    if (appointmentRepository.hasUnpaidByUser(clientUser.getId())) {
+        throw new AppointmentConflictException("Ya tenés un turno pendiente de pago. Completalo antes de reservar otro.");
+    }
+  } else {
+    if (appointmentRepository.hasUnpaidByEmail(request.getClientEmail())) {
+        throw new AppointmentConflictException("Ya tenés un turno pendiente de pago. Completalo antes de reservar otro.");
+    }
+  }
+
+    appointment.setStatus(AppointmentStatus.AWAITING_PAYMENT);
+    appointment.setReservedAt(LocalDateTime.now());
 
     // validate outofrange / null percentage: default deposit is set to 30%
     BigDecimal depositPercentage = appointment.getService().getDepositPorcentage();
     if (depositPercentage == null
-        || depositPercentage.compareTo(BigDecimal.ZERO) <= 0
-        || depositPercentage.compareTo(new BigDecimal("100")) > 0) {
-      depositPercentage = new BigDecimal("30.00");
+            || depositPercentage.compareTo(BigDecimal.ZERO) <= 0
+            || depositPercentage.compareTo(new BigDecimal("100")) > 0) {
+        depositPercentage = new BigDecimal("30.00");
     }
 
     // calculate deposit amount: price * percentage / 100
     BigDecimal depositAmount = appointment.getPrice()
-        .multiply(depositPercentage)
-        .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            .multiply(depositPercentage)
+            .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
 
     // create deposit with pending status
     Deposit deposit = Deposit.builder()
-        .appointment(appointment)
-        .amount(depositAmount)
-        .status(DepositStatus.PENDING)
-        .build();
+            .appointment(appointment)
+            .amount(depositAmount)
+            .status(DepositStatus.PENDING)
+            .build();
 
     appointmentRepository.save(appointment);
     depositRepository.save(deposit);
 
-    // link deposit to appointment so it shows up in the response
     appointment.setDeposit(deposit);
 
     return AppointmentMapper.toResponse(appointment);
-  }
+}
+
   // COMPLETE APPOINTMENT | /complete
   
   public AppointmentResponse completeAppointment(UUID publicId) {
@@ -252,6 +268,21 @@ public class AppointmentService {
         LocalDateTime.now(),
         appointment.getStartDatetime());
 
+    // if still awaiting payment, just release the slot — no need to cancel
+    if (appointment.getStatus() == AppointmentStatus.AWAITING_PAYMENT) {
+      appointment.setStatus(AppointmentStatus.UNBOOKED);
+      appointment.setClientName(null);
+      appointment.setClientEmail(null);
+      appointment.setClientPhone(null);
+      appointment.setClientUser(null);
+      appointment.setReservedAt(null);
+      deposit.setStatus(DepositStatus.CANCELED);
+      depositRepository.save(deposit);
+      appointmentRepository.save(appointment);
+      appointment.setDeposit(deposit);
+      return AppointmentMapper.toResponse(appointment);
+    }
+    
     if (hoursUntilAppointment >= 24) {
       // early cancelation: deposit is returned to the client
       deposit.setStatus(DepositStatus.REFUNDED);
