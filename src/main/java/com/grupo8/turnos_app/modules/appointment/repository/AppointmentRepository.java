@@ -59,11 +59,19 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     "AND a.service.id = :serviceId " +
     "AND ((:employeeId IS NULL AND a.employee IS NULL) OR a.employee.id = :employeeId) " +
     "AND a.startDatetime = :startDatetime")
-boolean existsSlot(
+    boolean existsSlot(
     @Param("businessId") Long businessId,
     @Param("serviceId") Long serviceId,
     @Param("employeeId") Long employeeId,
     @Param("startDatetime") LocalDateTime startDatetime);
 
   Optional<Appointment> findByPublicId(UUID publicId);
+
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
+    "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT')")
+    boolean hasPendingAppointmentsByUser(@Param("userId") Long userId);
+
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT')")
+    boolean hasPendingAppointmentsByBusiness(@Param("businessId") Long businessId);
 }

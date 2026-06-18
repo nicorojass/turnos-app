@@ -41,6 +41,12 @@ public class AppointmentController {
     public ResponseEntity<AppointmentResponse> suspendAppointment(@PathVariable UUID id) {
         return ResponseEntity.ok(appointmentService.suspendAppointment(id));
     }
+    
+    // PUT /appointments/{id}/complete - OWNER
+    @PutMapping("/appointments/{id}/complete")
+    public ResponseEntity<AppointmentResponse> completeAppointment(@PathVariable UUID id) {
+        return ResponseEntity.ok(appointmentService.completeAppointment(id));
+    }
 
     // DELETE /appointments/{id} - OWNER
     @DeleteMapping("/appointments/{id}")

@@ -172,6 +172,18 @@ public class AppointmentService {
 
     return AppointmentMapper.toResponse(appointment);
   }
+  // COMPLETE APPOINTMENT | /complete
+  
+  public AppointmentResponse completeAppointment(UUID publicId) {
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new NotFoundException("Appointment not found"));
+
+    if (appointment.getStatus() != AppointmentStatus.BOOKED)
+        throw new InvalidStatusException("Only BOOKED appointments can be marked as completed");
+
+    appointment.setStatus(AppointmentStatus.COMPLETED);
+    return AppointmentMapper.toResponse(appointmentRepository.save(appointment));
+}
 
   // CONFIRM DEPOSIT PAYMENT | /pay-deposit
 

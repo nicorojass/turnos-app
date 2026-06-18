@@ -10,6 +10,7 @@ import com.grupo8.turnos_app.auth.dto.LoginRequest;
 import com.grupo8.turnos_app.auth.dto.RegisterRequest;
 import com.grupo8.turnos_app.common.enums.RoleName;
 import com.grupo8.turnos_app.common.exception.EmailAlreadyInUseException;
+import com.grupo8.turnos_app.common.exception.ForbiddenOperationException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.role.entity.Role;
 import com.grupo8.turnos_app.modules.role.repository.RoleRepository;
@@ -31,7 +32,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
 
     public AuthResponse register(RegisterRequest request) {
-        if (userRepository.existsByEmail(request.getEmail()))
+        if (userRepository.existsByEmailAndActiveTrue(request.getEmail()))
             throw new EmailAlreadyInUseException("Email already in use");
 
         Role ownerRole = roleRepository.findByName(RoleName.OWNER)
@@ -58,6 +59,10 @@ public class AuthService {
         User user = userRepository.findByEmail(request.getEmail())
                 .orElseThrow(() -> new NotFoundException("User not found"));
 
+        if (!Boolean.TRUE.equals(user.getActive())){
+        throw new ForbiddenOperationException("This account has been deactivated");
+        }
+
         String token = jwtService.generateToken(user);
         return AuthResponse.builder().token(token).build();
     }
@@ -69,7 +74,7 @@ public class AuthService {
     }
 
     public AuthResponse registerClient(RegisterRequest request) {
-    if (userRepository.existsByEmail(request.getEmail()))
+    if (userRepository.existsByEmailAndActiveTrue(request.getEmail()))
         throw new EmailAlreadyInUseException("Email already in use");
 
     Role clientRole = roleRepository.findByName(RoleName.CLIENT)

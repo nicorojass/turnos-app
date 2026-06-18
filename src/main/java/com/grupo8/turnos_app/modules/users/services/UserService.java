@@ -7,8 +7,11 @@ import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 
-import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.common.enums.RoleName;
+import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
+import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
+import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.role.entity.Role;
 import com.grupo8.turnos_app.modules.role.repository.RoleRepository;
 import com.grupo8.turnos_app.modules.users.dto.UserResponse;
@@ -24,7 +27,9 @@ public class UserService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
-
+    private final AppointmentRepository appointmentRepository;
+    private final BusinessRepository businessRepository;
+    
     public UserResponse getUserById(UUID publicId) {
         return userRepository.findByPublicId(publicId)
                 .map(UserMapper::toResponse)
@@ -39,13 +44,31 @@ public class UserService {
     }
 
     public UserResponse toggleUserActive(UUID publicId) {
-        User user = userRepository.findByPublicId(publicId)
+    User user = userRepository.findByPublicId(publicId)
             .orElseThrow(() -> new NotFoundException("User not found"));
-        user.setActive(!user.getActive());
-        userRepository.save(user);
-            return UserMapper.toResponse(user);
+
+    if (Boolean.TRUE.equals(user.getActive())) {
+        if (appointmentRepository.hasPendingAppointmentsByUser(user.getId()))
+            throw new PendingAppointmentsException("User has pending appointments and cannot be deactivated");
+
+        boolean isOwner = user.getRoles().stream()
+                .anyMatch(r -> RoleName.OWNER.equals(r.getName()));
+
+        if (isOwner) {
+            businessRepository.findByOwnerId(user.getId()).ifPresent(business -> {
+                if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId()))
+                    throw new PendingAppointmentsException("User's business has pending appointments and cannot be deactivated");
+                business.setDeleted(true);
+                businessRepository.save(business);
+            });
+        }
     }
 
+    user.setActive(!user.getActive());
+    userRepository.save(user);
+    return UserMapper.toResponse(user);
+    }
+    
     public void forceDeleteUser(UUID publicId) {
         User user = userRepository.findByPublicId(publicId)
             .orElseThrow(() -> new NotFoundException("User not found"));

@@ -5,6 +5,9 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
+import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
+import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
 import com.grupo8.turnos_app.modules.business.dto.BusinessRequest;
 import com.grupo8.turnos_app.modules.business.dto.BusinessResponse;
 import com.grupo8.turnos_app.modules.business.entities.Business;
@@ -17,7 +20,6 @@ import com.grupo8.turnos_app.modules.business.exceptions.OwnerNotFoundException;
 import com.grupo8.turnos_app.modules.business.mapper.BusinessMapper;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessTypeRepository;
-import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.day_schedule.service.DayScheduleService;
 import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
@@ -33,7 +35,8 @@ public class BusinessService {
     private final BusinessTypeRepository businessTypeRepository;
     private final DayScheduleService dayScheduleService;
     private final AgendaGeneratorService agendaGeneratorService;
-
+    private final AppointmentRepository appointmentRepository;
+    
     public BusinessResponse createBusiness(String ownerEmail, BusinessRequest request) {
 
         if (businessRepository.existsByEmail(request.getEmail()))
@@ -118,6 +121,10 @@ public class BusinessService {
     public void deleteBusiness(UUID publicId) {
         Business business = businessRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+
+        if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId()))
+            throw new PendingAppointmentsException("Business has pending appointments and cannot be deleted");
+
         business.setDeleted(true);
         businessRepository.save(business);
     }
