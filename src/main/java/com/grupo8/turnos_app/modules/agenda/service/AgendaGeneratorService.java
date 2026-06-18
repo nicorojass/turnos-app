@@ -62,7 +62,7 @@ public class AgendaGeneratorService {
       fromDate = today;
     }
 
-    generateDaySlots(business, fromDate);
+    generateDaySlots(business, fromDate, daysToCreate);
 
     // update business' schedule end to the last generated day
     LocalDate baseEnd = business.getScheduleEnd() != null ? business.getScheduleEnd().toLocalDate() : today;
@@ -70,9 +70,10 @@ public class AgendaGeneratorService {
     businessRepository.save(business);
   }
 
-  // called manually when activating automatic scheduling or when an
-  // appointmentSchedule is created.
-  // generates from today without updating scheduleEnd.
+  // called when an appointmentSchedule is created or manually triggered.
+  // generates from today up to the current scheduleEnd horizon so a newly added
+  // AppointmentSchedule fills the entire existing agenda window.
+  // does not update scheduleEnd.
   @Transactional
   public void generateFromToday(UUID businessId) {
     Business business = businessRepository.findByPublicId(businessId)
@@ -85,11 +86,18 @@ public class AgendaGeneratorService {
     Integer daysToCreate = business.getScheduleDaysToCreate();
     if (daysToCreate == null || daysToCreate <= 0)
       return;
-    generateDaySlots(business, LocalDate.now());
+
+    LocalDate today = LocalDate.now();
+    int effectiveDays = daysToCreate;
+    if (business.getScheduleEnd() != null) {
+      long daysUntilEnd = ChronoUnit.DAYS.between(today, business.getScheduleEnd().toLocalDate());
+      if (daysUntilEnd > 0) effectiveDays = (int) daysUntilEnd;
+    }
+
+    generateDaySlots(business, today, effectiveDays);
   }
 
-  private void generateDaySlots(Business business, LocalDate fromDate) {
-    Integer daysToCreate = business.getScheduleDaysToCreate();
+  private void generateDaySlots(Business business, LocalDate fromDate, int daysToCreate) {
 
     Map<DayOfWeek, DaySchedule> dayScheduleMap = dayScheduleRepository
         .findAllByBusinessId(business.getId()).stream()
