@@ -17,7 +17,7 @@ public class ServMapper {
                 .durationMinutes(service.getDurationMinutes())
                 .price(service.getPrice())
                 .depositPorcentage(service.getDepositPorcentage())
-                .businessId(service.getBusiness().getId())
+                .businessId(service.getBusiness().getPublicId())
                 .build();
     }
 

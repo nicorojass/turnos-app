@@ -23,5 +23,5 @@ public class DayScheduleResponse {
     private LocalTime dayEnd;
     private Integer appointmentDuration;
     private Boolean enabled;
-    private Long businessId;
+    private UUID businessId;
 }
