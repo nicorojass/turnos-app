@@ -23,12 +23,11 @@ public class AppointmentResponse {
     private String clientEmail;
     private String clientPhone;
     private BigDecimal price;
-    private Long businessId;
-    private Long serviceId;
+    private UUID businessId;
+    private UUID serviceId;
     private String serviceName;
-    private Long employeeId;
+    private UUID employeeId;
     private String employeeName;
     private LocalDateTime createdAt;
-    // can be null: its gonna be included when it exists
     private DepositResponse deposit;
 }
