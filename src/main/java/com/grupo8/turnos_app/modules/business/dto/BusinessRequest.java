@@ -29,7 +29,7 @@ public class BusinessRequest {
     private String slug;
     
     @NotBlank(message = "Ingresar el teléfono del negocio")
-    @Pattern(regexp = "^\\+[0-9]{6,20}$", message = "Phone format must start with + followed by digits")
+    @Pattern(regexp = "^(0?[0-9]{2,4})[0-9]{6,8}$", message = "Formato de teléfono inválido. Ingresá solo números sin el signo +, por ejemplo: 1145678901")
     private String phone;
     
     private String description;

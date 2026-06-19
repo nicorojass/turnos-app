@@ -23,9 +23,8 @@ import lombok.Setter;
 public class ServRequest {
     
     @NotBlank(message = "Ingresa el nombre del servicio")
-    @Length(max = 255, message = "Name must be less than 255 characters")
+    @Length(max = 40, message = "El nombre del servicio debe tener menos de 40 caracteres")
     private String name;
-
     
     @Positive(message = "La duración del servicio debe ser positivo")
     @NotNull(message = "Ingresa la duración del servicio")
@@ -35,7 +34,7 @@ public class ServRequest {
     @DecimalMin(value = "0.01", message = "El precio del servicio no puede ser cero")
     private BigDecimal price;
     
-    @DecimalMin(value = "0.00", message = "El porcentaje de seña no puede ser negativo")
+    @DecimalMin(value = "0.00")
     @DecimalMax(value = "100.00", message = "El porcentaje de seña no puede exceder el 100%")
     @NotNull(message = "El porcentaje de seña es obligatorio")
     private BigDecimal depositPorcentage;
