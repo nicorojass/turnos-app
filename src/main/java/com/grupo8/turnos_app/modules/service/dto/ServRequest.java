@@ -22,21 +22,21 @@ import lombok.Setter;
 @Builder
 public class ServRequest {
     
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "Ingresa el nombre del servicio")
     @Length(max = 255, message = "Name must be less than 255 characters")
     private String name;
 
     
-    @Positive(message = "Duration must be a positive integer")
-    @NotNull(message = "Duration is required")
+    @Positive(message = "La duración del servicio debe ser positivo")
+    @NotNull(message = "Ingresa la duración del servicio")
     private Integer durationMinutes;
 
-    @NotNull(message = "Price is required")
-    @DecimalMin(value = "0.01", message = "Price must be a positive number")
+    @NotNull(message = "Ingresa el precio del servicio")
+    @DecimalMin(value = "0.01", message = "El precio del servicio no puede ser cero")
     private BigDecimal price;
     
-    @DecimalMin(value = "0.00", message = "Deposit percentage must be a non-negative number")
-    @DecimalMax(value = "100.00", message = "Deposit percentage cannot exceed 100")
-    @NotNull(message = "Deposit percentage is required")
+    @DecimalMin(value = "0.00", message = "El porcentaje de seña no puede ser negativo")
+    @DecimalMax(value = "100.00", message = "El porcentaje de seña no puede exceder el 100%")
+    @NotNull(message = "El porcentaje de seña es obligatorio")
     private BigDecimal depositPorcentage;
 }

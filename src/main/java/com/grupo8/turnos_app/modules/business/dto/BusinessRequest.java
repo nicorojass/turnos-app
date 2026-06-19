@@ -18,17 +18,17 @@ import lombok.Setter;
 @Builder
 public class BusinessRequest {
 
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "Ingresar el nombre del negocio")
     private String name;
     
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email format is invalid")
+    @NotBlank(message = "Ingresar el email del negocio")
+    @Email(message = "Formato de email inválido")
     private String email;
     
-    @NotBlank(message = "Slug is required")
+    @NotBlank(message = "Ingresa tu link personalizado")
     private String slug;
     
-    @NotBlank(message = "Phone is required")
+    @NotBlank(message = "Ingresar el teléfono del negocio")
     @Pattern(regexp = "^\\+[0-9]{6,20}$", message = "Phone format must start with + followed by digits")
     private String phone;
     

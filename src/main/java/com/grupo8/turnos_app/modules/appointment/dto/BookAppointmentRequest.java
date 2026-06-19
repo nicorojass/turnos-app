@@ -11,15 +11,15 @@ import lombok.Setter;
 
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
 public class BookAppointmentRequest {
-    @NotBlank(message = "Client name is required")
+    @NotBlank(message = "Ingresa tu nombre")
     private String clientName;
 
-    @NotBlank(message = "Client email is required")
-    @Email(message = "Client email is not valid")
+    @NotBlank(message = "Ingresa tu email ")
+    @Email(message = "El email no es válido")
     private String clientEmail;
 
-    @NotBlank(message = "Client phone is required")
-    @Pattern(regexp = "^[0-9+\\-\\s]{7,20}$", message = "Client phone is not valid")
+    @NotBlank(message = "Ingresa tu teléfono ")
+    @Pattern(regexp = "^[0-9+\\-\\s]{7,20}$", message = "El teléfono no es válido")
     private String clientPhone;
 
 }
