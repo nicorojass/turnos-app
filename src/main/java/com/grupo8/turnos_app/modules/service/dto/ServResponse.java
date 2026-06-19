@@ -20,7 +20,7 @@ public class ServResponse {
     private String name;
     private Integer durationMinutes;
     private BigDecimal price;
-    private Long businessId;
+    private UUID businessId;
     private BigDecimal depositPorcentage;
 
 }

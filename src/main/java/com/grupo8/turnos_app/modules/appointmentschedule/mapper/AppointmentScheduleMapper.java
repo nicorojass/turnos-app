@@ -14,9 +14,9 @@ public class AppointmentScheduleMapper {
                 .startTime(schedule.getStartTime())
                 .endTime(schedule.getEndTime())
                 .price(schedule.getPrice())
-                .businessId(schedule.getBusiness().getId())
-                .serviceId(schedule.getService().getId())
-                .employeeId(schedule.getEmployee() != null ? schedule.getEmployee().getId() : null)
+                .businessId(schedule.getBusiness().getPublicId())
+                .serviceId(schedule.getService().getPublicId())
+                .employeeId(schedule.getEmployee() != null ? schedule.getEmployee().getPublicId() : null)
                 .build();
     }
 

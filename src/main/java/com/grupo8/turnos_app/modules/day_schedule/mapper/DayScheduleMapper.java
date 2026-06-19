@@ -13,7 +13,7 @@ public class DayScheduleMapper {
         .dayEnd(daySchedule.getDayEnd())
         .appointmentDuration(daySchedule.getAppointmentDuration())
         .enabled(daySchedule.getEnabled())
-        .businessId(daySchedule.getBusiness().getId())
+        .businessId(daySchedule.getBusiness().getPublicId())
         .build();
   }
 }

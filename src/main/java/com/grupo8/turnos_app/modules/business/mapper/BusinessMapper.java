@@ -22,7 +22,7 @@ public class BusinessMapper {
                 .scheduleDaysToCreate(business.getScheduleDaysToCreate())
                 .scheduleAnticipation(business.getScheduleAnticipation())
                 .deleted(business.getDeleted())
-                .ownerId(business.getOwner().getId())
+                .ownerId(business.getOwner().getPublicId())
                 .businessTypes(
                     business.getBusinessTypes() == null ? Collections.emptyList() :
                     business.getBusinessTypes().stream()

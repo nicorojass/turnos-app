@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.appointmentschedule.dto;
 
 import java.time.LocalTime;
+import java.util.UUID;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
@@ -30,7 +31,7 @@ public class AppointmentScheduleRequest {
     private LocalTime endTime;
 
     @NotNull(message = "Service ID is required")
-    private Long serviceId;
+    private UUID serviceId;
 
-    private Long employeeId;
+    private UUID employeeId;
 }
