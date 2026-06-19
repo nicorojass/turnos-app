@@ -132,6 +132,9 @@ public class BusinessService {
     public void forceDeleteBusiness(UUID publicId) {
         Business business = businessRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId())) {
+        throw new PendingAppointmentsException("Business has pending appointments and cannot be deleted");
+    }
         businessRepository.delete(business);
     }
 

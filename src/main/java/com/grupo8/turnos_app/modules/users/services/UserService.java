@@ -76,6 +76,9 @@ public class UserService {
     public void forceDeleteUser(UUID publicId) {
         User user = userRepository.findByPublicId(publicId)
             .orElseThrow(() -> new NotFoundException("User not found"));
+        if (appointmentRepository.hasPendingAppointmentsByUser(user.getId())) {
+        throw new PendingAppointmentsException("User has pending appointments and cannot be deleted");
+    }
         userRepository.delete(user);
     }
 
