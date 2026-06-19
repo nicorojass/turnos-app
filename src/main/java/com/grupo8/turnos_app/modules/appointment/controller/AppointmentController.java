@@ -7,6 +7,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,6 +41,12 @@ public class AppointmentController {
     @PutMapping("/appointments/{id}/suspend")
     public ResponseEntity<AppointmentResponse> suspendAppointment(@PathVariable UUID id) {
         return ResponseEntity.ok(appointmentService.suspendAppointment(id));
+    }
+    
+    // PUT /appointments/{id}/complete - OWNER
+    @PutMapping("/appointments/{id}/complete")
+    public ResponseEntity<AppointmentResponse> completeAppointment(@PathVariable UUID id) {
+        return ResponseEntity.ok(appointmentService.completeAppointment(id));
     }
 
     // DELETE /appointments/{id} - OWNER
@@ -88,8 +95,9 @@ public class AppointmentController {
     @PostMapping("/appointments/{id}/book")
     public ResponseEntity<AppointmentResponse> bookAppointment(
             @PathVariable UUID id,
-            @RequestBody @Valid BookAppointmentRequest request) {
-        return ResponseEntity.ok(appointmentService.bookAppointment(id, request));
+            @RequestBody @Valid BookAppointmentRequest request,
+            Authentication authentication) {
+        return ResponseEntity.ok(appointmentService.bookAppointment(id, request, authentication));
     }
 
     // POST /appointments/{id}/pay-deposit - PUBLIC

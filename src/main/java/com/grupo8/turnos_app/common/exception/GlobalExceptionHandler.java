@@ -10,8 +10,10 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentConflictException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentNotAvailableException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
 import com.grupo8.turnos_app.modules.appointmentschedule.exception.AppointmentScheduleAlreadyExistsException;
 import com.grupo8.turnos_app.modules.appointmentschedule.exception.InvalidScheduleRangeException;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessAlreadyExistsException;
@@ -126,6 +128,18 @@ public class GlobalExceptionHandler {
                 .body(new ErrorResponse(409, ex.getMessage()));
     }
 
+    @ExceptionHandler(PendingAppointmentsException.class)
+    public ResponseEntity<ErrorResponse> handlePendingAppointments(PendingAppointmentsException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(new ErrorResponse(409, ex.getMessage())); 
+    }   
+
+    @ExceptionHandler(AppointmentConflictException.class)
+    public ResponseEntity<ErrorResponse> handleAppointmentConflict(AppointmentConflictException ex) {
+        return ResponseEntity.status(HttpStatus.CONFLICT)
+            .body(new ErrorResponse(409, ex.getMessage()));
+    }
+    
     @ExceptionHandler(EmailAlreadyInUseException.class)
     public ResponseEntity<ErrorResponse> handleEmailInUse(EmailAlreadyInUseException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)

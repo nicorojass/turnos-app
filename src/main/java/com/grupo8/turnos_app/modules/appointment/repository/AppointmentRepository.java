@@ -59,11 +59,39 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     "AND a.service.id = :serviceId " +
     "AND ((:employeeId IS NULL AND a.employee IS NULL) OR a.employee.id = :employeeId) " +
     "AND a.startDatetime = :startDatetime")
-boolean existsSlot(
+    boolean existsSlot(
     @Param("businessId") Long businessId,
     @Param("serviceId") Long serviceId,
     @Param("employeeId") Long employeeId,
     @Param("startDatetime") LocalDateTime startDatetime);
 
   Optional<Appointment> findByPublicId(UUID publicId);
+
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
+    "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT')")
+    boolean hasPendingAppointmentsByUser(@Param("userId") Long userId);
+
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT')")
+    boolean hasPendingAppointmentsByBusiness(@Param("businessId") Long businessId);
+
+    @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
+    "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT') " +
+    "AND a.startDatetime < :endDatetime AND a.endDatetime > :startDatetime")
+  boolean hasOverlappingAppointment(
+    @Param("userId") Long userId,
+    @Param("startDatetime") LocalDateTime startDatetime,
+    @Param("endDatetime") LocalDateTime endDatetime);
+
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientEmail = :email " +
+    "AND a.status = 'AWAITING_PAYMENT'")
+  boolean hasUnpaidByEmail(@Param("email") String email);
+
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
+    "AND a.status = 'AWAITING_PAYMENT'")
+  boolean hasUnpaidByUser(@Param("userId") Long userId);
+
+  @Query("SELECT a FROM Appointment a WHERE a.status = 'AWAITING_PAYMENT' " +
+    "AND a.reservedAt < :expiry")
+  List<Appointment> findExpiredReservations(@Param("expiry") LocalDateTime expiry);
 }
