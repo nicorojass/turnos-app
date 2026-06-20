@@ -16,16 +16,16 @@ import lombok.Setter;
 @Builder
 public class RegisterRequest {
 
-    @NotBlank(message = "Name is required")
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Name must not contain numbers")
+    @NotBlank(message = "El nombre es obligatorio")
+    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "El formato del nombre es invalido. No debe contener números")
     private String name;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email is not valid")
+    @NotBlank(message = "El email es obligatorio")
+    @Email(message = "El email no es válido")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, max = 64, message = "Password must be between 8 and 64 characters")
-    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[\\x00-\\x7F]+$", message = "Password must contain uppercase, lowercase, a number and only standard characters")
+    @NotBlank(message = "La contraseña es requerida")
+    @Size(min = 8, max = 64, message = "La contraseña debe tener entre 8 y 64 caracteres")
+    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[\\x00-\\x7F]+$", message = "La contraseña debe contener al menos una letra mayúscula, una letra minúscula y un número")
     private String password;
 }

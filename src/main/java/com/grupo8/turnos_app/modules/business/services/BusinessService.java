@@ -40,17 +40,17 @@ public class BusinessService {
     public BusinessResponse createBusiness(String ownerEmail, BusinessRequest request) {
 
         if (businessRepository.existsByEmail(request.getEmail()))
-            throw new BusinessAlreadyExistsException("A business with that email already exists");
+            throw new BusinessAlreadyExistsException("Ya existe un negocio con ese email");
         if (businessRepository.existsBySlug(request.getSlug()))
-            throw new BusinessAlreadyExistsException("A business with that slug already exists");
+            throw new BusinessAlreadyExistsException("El link personalizado ya existe. Ingresa uno distinto");
         if (businessRepository.existsByPhone(request.getPhone()))
-            throw new BusinessAlreadyExistsException("A business with that phone already exists");
+            throw new BusinessAlreadyExistsException("Ya existe un negocio con ese teléfono");
 
         User owner = userRepository.findByEmail(ownerEmail)
-                .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
+                .orElseThrow(() -> new OwnerNotFoundException("Error al crear negocio: dueño no encontrado"));
 
         if (businessRepository.findByOwnerId(owner.getId()).isPresent())
-            throw new BusinessAlreadyExistsException("This owner already has a business");
+            throw new BusinessAlreadyExistsException("Ya tenes un negocio creado con este usuario");
 
         Business business = BusinessMapper.toEntity(request);
         business.setOwner(owner);
@@ -69,7 +69,7 @@ public class BusinessService {
     public BusinessResponse getBusinessById(UUID publicId) {
         return businessRepository.findByPublicId(publicId)
                 .map(BusinessMapper::toResponse)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
     }
 
     public List<BusinessResponse> getAllBusinesses() {
@@ -82,12 +82,12 @@ public class BusinessService {
     public BusinessResponse getBusinessBySlug(String slug) {
         return businessRepository.findBySlug(slug)
                 .map(BusinessMapper::toResponse)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
     }
 
     public BusinessResponse updateBusiness(UUID publicId, BusinessRequest request) {
         Business business = businessRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
         // if activating automatic schedule, reset schedule end to trigger regeneration
         // from today
@@ -120,10 +120,10 @@ public class BusinessService {
 
     public void deleteBusiness(UUID publicId) {
         Business business = businessRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
         if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId()))
-            throw new PendingAppointmentsException("Business has pending appointments and cannot be deleted");
+            throw new PendingAppointmentsException("El negocio tiene turnos pendientes y no puede ser eliminado");
 
         business.setDeleted(true);
         businessRepository.save(business);
@@ -131,22 +131,22 @@ public class BusinessService {
 
     public void forceDeleteBusiness(UUID publicId) {
         Business business = businessRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
                 if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId())) {
-        throw new PendingAppointmentsException("Business has pending appointments and cannot be deleted");
+        throw new PendingAppointmentsException("El negocio tiene turnos pendientes y no puede ser eliminado");
     }
         businessRepository.delete(business);
     }
 
     public BusinessResponse addTypeToBusiness(UUID businessId, UUID typeId) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
         BusinessType businessType = businessTypeRepository.findByPublicId(typeId)
-                .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
+                .orElseThrow(() -> new BusinessTypeNotFoundException("Tipo de negocio no encontrado"));
 
         if (business.getBusinessTypes().contains(businessType))
-            throw new BusinessTypeAlreadyAssignedException("Business already has this type");
+            throw new BusinessTypeAlreadyAssignedException("El negocio ya tiene este rubro asignado");
 
         business.getBusinessTypes().add(businessType);
         return BusinessMapper.toResponse(businessRepository.save(business));
@@ -154,10 +154,10 @@ public class BusinessService {
 
     public BusinessResponse removeTypeFromBusiness(UUID businessId, UUID typeId) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
         BusinessType businessType = businessTypeRepository.findByPublicId(typeId)
-                .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
+                .orElseThrow(() -> new BusinessTypeNotFoundException("Rubro no encontrado"));
 
         business.getBusinessTypes().remove(businessType);
         return BusinessMapper.toResponse(businessRepository.save(business));
@@ -165,10 +165,10 @@ public class BusinessService {
 
     public BusinessResponse getMyBusiness(String email) {
         User owner = userRepository.findByEmail(email)
-                .orElseThrow(() -> new OwnerNotFoundException("Owner not found"));
+                .orElseThrow(() -> new OwnerNotFoundException("Dueño no encontrado"));
         return businessRepository.findByOwner_Id(owner.getId())
                 .map(BusinessMapper::toResponse)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
     }
 
 }

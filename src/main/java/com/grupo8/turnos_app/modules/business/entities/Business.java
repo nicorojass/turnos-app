@@ -19,6 +19,8 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -40,18 +42,19 @@ public class Business {
     @Column(nullable = false, unique = true, updatable = false)
     private UUID publicId;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 100)
     private String slug;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private String phone;
 
+    @Column(length = 300)
     private String description;
 
     @Builder.Default
@@ -59,9 +62,11 @@ public class Business {
 
     private LocalDateTime scheduleEnd;
 
+    @Min(1) @Max(180) // validation for a reasonable range of days to create schedule
     @Builder.Default
     private Integer scheduleDaysToCreate = 30;
 
+    @Min(0) @Max(60) // validation for a reasonable anticipation days to renew schedule
     @Builder.Default
     private Integer scheduleAnticipation = 5;
 

@@ -13,6 +13,6 @@ import lombok.Setter;
 @Builder
 public class BusinessTypeRequest {
 
-    @NotBlank(message = "Name is required")
+    @NotBlank(message = "Ingresa un rubro de negocio")
     private String name;
 }

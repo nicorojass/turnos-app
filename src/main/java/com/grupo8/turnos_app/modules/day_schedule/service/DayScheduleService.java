@@ -31,7 +31,7 @@ public class DayScheduleService {
   private final BusinessRepository businessRepository;
 
   // Called by businessService when creating a new business
-  // Creates each week's day_schedule with null values to be set later.
+  // Creates each week's day_schedule with null values to be set later
   @Transactional
   public void initializeScheduleForBusiness(Business business) {
     List<DaySchedule> schedules = Arrays.stream(DayOfWeek.values())
@@ -51,7 +51,7 @@ public class DayScheduleService {
   // get schedule by businessId
   public List<DayScheduleResponse> getScheduleByBusiness(UUID businessId) {
     Business business = businessRepository.findByPublicId(businessId)
-        .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+        .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
     return dayScheduleRepository.findAllByBusinessId(business.getId())
         .stream()
         .map(DayScheduleMapper::toResponse)
@@ -64,7 +64,7 @@ public class DayScheduleService {
   public List<DayScheduleResponse> updateFullSchedule(UUID businessId,
       List<DayScheduleUpdateRequest> requests) {
     Business business = businessRepository.findByPublicId(businessId)
-        .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+        .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
     return requests.stream()
         .map(req -> updateDay(business.getId(), req))
@@ -76,7 +76,7 @@ public class DayScheduleService {
     DaySchedule daySchedule = dayScheduleRepository
         .findByBusinessIdAndDay(businessId, request.getDay())
         .orElseThrow(() -> new DayScheduleNotFoundException(
-            "Schedule not found for day " + request.getDay()));
+            "Dia no encontrado"));
 
     // new values.
     LocalTime effectiveStart = request.getDayStart() != null
@@ -88,7 +88,7 @@ public class DayScheduleService {
 
     // check to avoid time mismatching (ej. start 22hs ; end 14hs)
     if (effectiveStart != null && effectiveEnd != null && !effectiveEnd.isAfter(effectiveStart)) {
-      throw new InvalidScheduleTimeException("End time must be after start time for day " + request.getDay());
+      throw new InvalidScheduleTimeException("La hora de finalización del dia debe ser después de la hora de inicio");
     }
 
     if (request.getDayStart() != null)
