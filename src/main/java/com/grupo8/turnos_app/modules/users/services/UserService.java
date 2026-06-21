@@ -35,7 +35,7 @@ public class UserService {
     public UserResponse getUserById(UUID publicId) {
         return userRepository.findByPublicId(publicId)
                 .map(UserMapper::toResponse)
-                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the user you're looking for."));
     }
 
     public List<UserResponse> getAllUsers() {
@@ -47,11 +47,11 @@ public class UserService {
 
     public UserResponse toggleUserActive(UUID publicId) {
     User user = userRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+            .orElseThrow(() -> new NotFoundException("We couldn't find the user you're looking for."));
 
     if (Boolean.TRUE.equals(user.getActive())) {
         if (appointmentRepository.hasPendingAppointmentsByUser(user.getId(), LocalDateTime.now()))
-            throw new PendingAppointmentsException("El usuario tiene turnos pendientes y no puede ser desactivado");
+            throw new PendingAppointmentsException("This user can't be deactivated because they have upcoming appointments that are booked or awaiting payment.");
 
         boolean isOwner = user.getRoles().stream()
                 .anyMatch(r -> RoleName.OWNER.equals(r.getName()));
@@ -59,14 +59,14 @@ public class UserService {
         if (isOwner) {
             businessRepository.findByOwnerId(user.getId()).ifPresent(business -> {
                 if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId(), LocalDateTime.now()))
-                    throw new PendingAppointmentsException("El usuario tiene turnos pendientes y no puede ser desactivado");
+                    throw new PendingAppointmentsException("This user can't be deactivated because they have upcoming appointments that are booked or awaiting payment.");
                 business.setDeleted(true);
                 businessRepository.save(business);
             });
         }
     } else {
         if (userRepository.existsByEmailAndActiveTrue(user.getEmail()))
-            throw new EmailAlreadyInUseException("Ya existe una cuenta activa con este email");
+            throw new EmailAlreadyInUseException("There's already an active account using this email address.");
     }
 
     user.setActive(!user.getActive());
@@ -76,20 +76,20 @@ public class UserService {
     
     public void forceDeleteUser(UUID publicId) {
         User user = userRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+            .orElseThrow(() -> new NotFoundException("We couldn't find the user you're looking for."));
         if (appointmentRepository.hasPendingAppointmentsByUser(user.getId(), LocalDateTime.now())) {
-        throw new PendingAppointmentsException("El usuario tiene turnos pendientes y no puede ser eliminado");
+        throw new PendingAppointmentsException("This user can't be deleted because they have upcoming appointments that are booked or awaiting payment.");
     }
         userRepository.delete(user);
     }
 
     public UserResponse updateUserRoles(UUID publicId, Set<RoleName> roleNames) {
         User user = userRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the user you're looking for."));
 
         Set<Role> roles = roleNames.stream()
                 .map(roleName -> roleRepository.findByName(roleName)
-                        .orElseThrow(() -> new NotFoundException("Rol no encontrado: " )))
+                        .orElseThrow(() -> new NotFoundException("One of the specified roles could not be found.")))
                 .collect(Collectors.toSet());
 
         user.getRoles().clear();

@@ -54,7 +54,7 @@ public class AppointmentService {
       Pageable pageable) {
 
     Business business = businessRepository.findByPublicId(businessId)
-        .orElseThrow(() -> new NotFoundException("Business not found"));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the business you're looking for."));
 
     Page<Appointment> page = (status != null)
         ? appointmentRepository.findByBusinessIdAndStatus(business.getId(), status, pageable)
@@ -66,7 +66,7 @@ public class AppointmentService {
   // returns today's appointments for the owner dashboard
   public List<AppointmentResponse> getTodayAppointments(UUID businessId) {
     Business business = businessRepository.findByPublicId(businessId)
-        .orElseThrow(() -> new NotFoundException("Business not found"));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the business you're looking for."));
     LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
     LocalDateTime endOfDay = startOfDay.plusDays(1);
 
@@ -84,7 +84,7 @@ public class AppointmentService {
       Long employeeId) {
 
     Business business = businessRepository.findByPublicId(businessId)
-        .orElseThrow(() -> new NotFoundException("Business not found"));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the business you're looking for."));
 
     return appointmentRepository
         .findAvailableSlots(business.getId(), LocalDateTime.now(), serviceId, employeeId)
@@ -111,40 +111,40 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
 
     // step 1: resolver UUID al Long interno (sin lock)
     Appointment ref = appointmentRepository.findByPublicId(publicId)
-        .orElseThrow(() -> new NotFoundException("Error al reservar: turno no encontrado."));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the appointment you're trying to book. It may have been removed."));
 
     // step 2: re-fetch con lock pesimista usando el PK interno
     Appointment appointment = appointmentRepository.findByIdWithLock(ref.getId())
-        .orElseThrow(() -> new NotFoundException("Error al reservar: turno no encontrado."));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the appointment you're trying to book. It may have been removed."));
 
     // check if slot is still available
     if (appointment.getStatus() != AppointmentStatus.UNBOOKED) {
-        throw new AppointmentNotAvailableException("El turno ya no está disponible.");
+        throw new AppointmentNotAvailableException("This appointment slot is no longer available. Please choose a different one.");
     }
 
     // check if business is active
     if (Boolean.TRUE.equals(appointment.getBusiness().getDeleted())) {
-      throw new NotFoundException("El negocio no está disponible.");
+      throw new NotFoundException("This business is currently unavailable. Please try again later.");
     }
 
     // validate that appointment has price and service set
     if (appointment.getPrice() == null || appointment.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
-        throw new InvalidPriceException("Error al reservar: El precio del turno es inválido.");
+        throw new InvalidPriceException("This appointment can't be booked because it has an invalid price. Please contact the business for assistance.");
     }
 
     if (appointment.getService() == null) {
-        throw new NoServiceException("Error al reservar: El turno no tiene un servicio asociado.");
+        throw new NoServiceException("This appointment can't be booked because it has no service assigned. Please contact the business for assistance.");
     }
 
     User clientUser = null;
     if (authentication != null && authentication.isAuthenticated()) {
         clientUser = userRepository.findByEmail(authentication.getName())
-                .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
+                .orElseThrow(() -> new NotFoundException("We couldn't find your account. Please log in again."));
         appointment.setClientName(clientUser.getName());
         appointment.setClientEmail(clientUser.getEmail());
     } else {
         if (request.getClientName() == null || request.getClientEmail() == null) {
-            throw new IllegalArgumentException("Ingresa tu nombre y email para reservar el turno.");
+            throw new IllegalArgumentException("Please provide your name and email address to complete the booking.");
         }
         appointment.setClientName(request.getClientName());
         appointment.setClientEmail(request.getClientEmail());
@@ -155,17 +155,17 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
     // check for overlapping appointments
     if (clientUser != null && appointmentRepository.hasOverlappingAppointment(
             clientUser.getId(), appointment.getStartDatetime(), appointment.getEndDatetime())) {
-        throw new AppointmentConflictException("Ya tenés un turno reservado en este horario.");
+        throw new AppointmentConflictException("You already have an appointment booked during this time slot. Please choose a different one.");
     }
 
     // anti-spam: no se puede reservar si ya tenés un turno pendiente de pago
   if (clientUser != null) {
     if (appointmentRepository.hasUnpaidByUser(clientUser.getId())) {
-        throw new AppointmentConflictException("Ya tenés un turno pendiente de pago. Completalo antes de reservar otro.");
+        throw new AppointmentConflictException("You have an appointment awaiting payment. Please complete that payment before booking a new one.");
     }
   } else {
     if (appointmentRepository.hasUnpaidByEmail(request.getClientEmail())) {
-        throw new AppointmentConflictException("Ya tenés un turno pendiente de pago. Completalo antes de reservar otro.");
+        throw new AppointmentConflictException("You have an appointment awaiting payment. Please complete that payment before booking a new one.");
     }
   }
 
@@ -206,20 +206,20 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
   public AppointmentResponse confirmDepositPayment(UUID publicId) {
 
     Appointment appointment = appointmentRepository.findByPublicId(publicId)
-        .orElseThrow(() -> new NotFoundException("Error al confirmar el pago: turno no encontrado."));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the appointment you're trying to pay for. It may have been removed."));
 
     // Payment is only allowed when the appointment is waiting for it
     if (appointment.getStatus() != AppointmentStatus.AWAITING_PAYMENT) {
       throw new InvalidStatusException(
-          "Error al confirmar el pago: el turno no está esperando un pago.");
+          "This appointment isn't waiting for a payment right now. Its current status doesn't allow payment confirmation.");
     }
 
     Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
-        .orElseThrow(() -> new NotFoundException("Error al confirmar el pago: seña no encontrada para este turno"));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the deposit associated with this appointment. Please contact support."));
 
     if (deposit.getStatus() != DepositStatus.PENDING) {
       throw new InvalidStatusException(
-          "Error al confirmar el pago: la seña no está en estado pendiente.");
+          "This deposit has already been processed and can't be confirmed again.");
     }
 
     // confirm payment: appointment status = BOOKED
@@ -243,17 +243,17 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
   public AppointmentResponse cancelAppointment(UUID publicId) {
 
     Appointment appointment = appointmentRepository.findByPublicId(publicId)
-        .orElseThrow(() -> new NotFoundException("Error al cancelar el turno: turno no encontrado."));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the appointment you're trying to cancel. It may have already been removed."));
 
     // only BOOKED or AWAITING_PAYMENT appointments can be cancelled
     if (appointment.getStatus() != AppointmentStatus.BOOKED
         && appointment.getStatus() != AppointmentStatus.AWAITING_PAYMENT) {
       throw new InvalidStatusException(
-          "Error al cancelar el turno: el turno no puede ser cancelado en su estado actual.");
+          "This appointment can't be cancelled in its current state. Only booked or pending-payment appointments can be cancelled.");
     }
 
     Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
-        .orElseThrow(() -> new NotFoundException("Error al cancelar el turno: seña no encontrada para este turno"));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the deposit associated with this appointment. Please contact support."));
 
     // calculate hours remaining until appointment start
     long hoursUntilAppointment = ChronoUnit.HOURS.between(
@@ -300,15 +300,15 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
   public AppointmentResponse suspendAppointment(UUID publicId) {
 
     Appointment appointment = appointmentRepository.findByPublicId(publicId)
-        .orElseThrow(() -> new NotFoundException("Error al suspender el turno: turno no encontrado."));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the appointment you're trying to suspend. It may have been removed."));
 
     if (appointment.getStatus() != AppointmentStatus.BOOKED) {
       throw new InvalidStatusException(
-          "Error al suspender el turno: solo los turnos reservados pueden ser suspendidos.");
+          "Only confirmed (booked) appointments can be suspended. This appointment is not in a bookable state.");
     }
 
     Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
-        .orElseThrow(() -> new NotFoundException("Error al suspender el turno: seña no encontrada para este turno."));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the deposit associated with this appointment. Please contact support."));
 
     deposit.setStatus(DepositStatus.REFUNDED);
     appointment.setStatus(AppointmentStatus.SUSPENDED);
@@ -328,12 +328,12 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
   public void deleteAppointment(UUID publicId) {
 
     Appointment appointment = appointmentRepository.findByPublicId(publicId)
-        .orElseThrow(() -> new NotFoundException("Error al eliminar el turno: turno no encontrado."));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the appointment you're trying to delete. It may have already been removed."));
 
     // check status so only unbooked appts are able to be hard deleted
     if (appointment.getStatus() != AppointmentStatus.UNBOOKED) {
       throw new InvalidStatusException(
-          "Error al eliminar el turno: solo los turnos sin reservar pueden ser eliminados.");
+          "Only unbooked appointment slots can be deleted. This appointment already has a client associated with it.");
     }
 
     appointmentRepository.delete(appointment);

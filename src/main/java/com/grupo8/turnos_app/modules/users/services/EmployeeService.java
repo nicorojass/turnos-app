@@ -34,7 +34,7 @@ public class EmployeeService {
 
     public List<UserResponse> getEmployeesByBusiness(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+                .orElseThrow(() -> new BusinessNotFoundException("We couldn't find the business you're looking for."));
         return business.getEmployees().stream()
                 .map(UserMapper::toResponse)
                 .toList();
@@ -42,19 +42,19 @@ public class EmployeeService {
 
     public UserResponse createEmployee(UUID businessId, EmployeeRequest request, String ownerEmail) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+                .orElseThrow(() -> new BusinessNotFoundException("We couldn't find the business you're looking for."));
 
         User owner = userRepository.findByEmail(ownerEmail)
-                .orElseThrow(() -> new NotFoundException("Dueño no encontrado"));
+                .orElseThrow(() -> new NotFoundException("Your account could not be found. Please try again."));
 
         if (!business.getOwner().getId().equals(owner.getId()))
-            throw new ForbiddenOperationException("No tenes permisos para agregar empleados a este negocio");
+            throw new ForbiddenOperationException("You don't have permission to add employees to this business.");
 
         if (userRepository.existsByEmail(request.getEmail()))
-            throw new EmailAlreadyInUseException("Ya existe una cuenta con este email");
+            throw new EmailAlreadyInUseException("An account with that email address already exists. Please use a different one.");
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
-                .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
+                .orElseThrow(() -> new NotFoundException("A required system role could not be found. Please contact support."));
 
         User employee = User.builder()
                 .name(request.getName())
@@ -72,7 +72,7 @@ public class EmployeeService {
 
     public UserResponse getEmployee(UUID publicId) {
     User employee = userRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+            .orElseThrow(() -> new NotFoundException("We couldn't find the employee you're looking for."));
 
     if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
         throw new NotFoundException("Empleado no encontrado");
@@ -83,10 +83,10 @@ public class EmployeeService {
 
     public UserResponse updateEmployee(UUID publicId, EmployeeRequest request) {
         User employee = userRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the employee you're looking for."));
                 
         if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
-        throw new ForbiddenOperationException("El usuario a modificar no es un empleado");
+        throw new ForbiddenOperationException("The user you're trying to update is not registered as an employee.");
         }
         employee.setName(request.getName());
         employee.setEmail(request.getEmail());
@@ -98,10 +98,10 @@ public class EmployeeService {
 
     public void removeEmployee(UUID publicId) {
         User employee = userRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the employee you're looking for."));
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
-                .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
+                .orElseThrow(() -> new NotFoundException("A required system role could not be found. Please contact support."));
 
         employee.getRoles().remove(employeeRole);
         userRepository.save(employee);

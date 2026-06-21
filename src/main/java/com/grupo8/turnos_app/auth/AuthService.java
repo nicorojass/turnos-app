@@ -33,10 +33,10 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmailAndActiveTrue(request.getEmail()))
-            throw new EmailAlreadyInUseException("El email ya está en uso");
+            throw new EmailAlreadyInUseException("This email address is already registered. Please use a different one.");
 
         Role ownerRole = roleRepository.findByName(RoleName.OWNER)
-                .orElseThrow(() -> new NotFoundException("Rol inexistente"));
+                .orElseThrow(() -> new NotFoundException("A required system role could not be found. Please contact support."));
 
         User user = User.builder()
                 .name(request.getName())
@@ -57,10 +57,10 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("No account was found with that email address."));
 
         if (!Boolean.TRUE.equals(user.getActive())){
-        throw new ForbiddenOperationException("Esta cuenta ha sido desactivada");
+        throw new ForbiddenOperationException("Your account has been deactivated. Please contact support for assistance.");
         }
 
         String token = jwtService.generateToken(user);
@@ -69,16 +69,16 @@ public class AuthService {
 
     public UserResponse getMe(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+                .orElseThrow(() -> new NotFoundException("No account was found with that email address."));
         return UserMapper.toResponse(user);
     }
 
     public AuthResponse registerClient(RegisterRequest request) {
     if (userRepository.existsByEmailAndActiveTrue(request.getEmail()))
-        throw new EmailAlreadyInUseException("El email ya está en uso");
+        throw new EmailAlreadyInUseException("This email address is already registered. Please use a different one.");
 
     Role clientRole = roleRepository.findByName(RoleName.CLIENT)
-            .orElseThrow(() -> new NotFoundException("Rol inexistente"));
+            .orElseThrow(() -> new NotFoundException("A required system role could not be found. Please contact support."));
 
     User user = User.builder()
             .name(request.getName())

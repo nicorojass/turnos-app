@@ -36,7 +36,7 @@ public class AppointmentScheduleService {
 
     public List<AppointmentScheduleResponse> getByBusiness(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new NotFoundException("Business not found"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the business you're looking for."));
         return appointmentScheduleRepository.findByBusinessId(business.getId())
                 .stream()
                 .map(AppointmentScheduleMapper::toResponse)
@@ -45,20 +45,20 @@ public class AppointmentScheduleService {
 
     public AppointmentScheduleResponse create(UUID businessId, AppointmentScheduleRequest request) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the business you're looking for."));
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
-                .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the service you're looking for."));
 
         long scheduleMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
         if (scheduleMinutes < service.getDurationMinutes()) {
-            throw new InvalidScheduleRangeException("El rango de tiempo debe ser al menos tan largo como la duración del servicio");
+            throw new InvalidScheduleRangeException("The time range you selected is too short for this service. Please make sure the end time allows enough time to complete it.");
         }
 
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findByPublicId(request.getEmployeeId())
-                    .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+                    .orElseThrow(() -> new NotFoundException("We couldn't find the employee you're looking for."));
         }
 
         Long employeeId = employee != null ? employee.getId() : null;
@@ -66,7 +66,7 @@ public class AppointmentScheduleService {
         if (appointmentScheduleRepository.existsConflictingSchedule(
                 business.getId(), request.getDayNumber(), request.getStartTime(), request.getEndTime(),
                 employeeId, null)) {
-            throw new AppointmentScheduleAlreadyExistsException("Ya existe un horario para este día, hora y empleado");
+            throw new AppointmentScheduleAlreadyExistsException("There's already a schedule set for that day, time slot, and employee. Please choose a different combination.");
         }
 
         AppointmentSchedule schedule = AppointmentScheduleMapper.toEntity(request);
@@ -84,23 +84,23 @@ public class AppointmentScheduleService {
 
     public void delete(UUID publicId) {
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the scheduled appointment you're looking for."));
         appointmentScheduleRepository.delete(schedule);
     }
 
     public AppointmentScheduleResponse update(UUID businessId, UUID publicId, AppointmentScheduleRequest request) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the business you're looking for."));
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the scheduled appointment you're looking for."));
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
-                .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
+                .orElseThrow(() -> new NotFoundException("We couldn't find the service you're looking for."));
 
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findByPublicId(request.getEmployeeId())
-                    .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+                    .orElseThrow(() -> new NotFoundException("We couldn't find the employee you're looking for."));
         }
 
         Long employeeId = employee != null ? employee.getId() : null;
@@ -108,7 +108,7 @@ public class AppointmentScheduleService {
         if (appointmentScheduleRepository.existsConflictingSchedule(
                 business.getId(), request.getDayNumber(), request.getStartTime(), request.getEndTime(),
                 employeeId, schedule.getId())) {
-            throw new AppointmentScheduleAlreadyExistsException("Ya existe un horario para este día, hora y empleado");
+            throw new AppointmentScheduleAlreadyExistsException("There's already a schedule set for that day, time slot, and employee. Please choose a different combination.");
         }
 
         schedule.setDayNumber(request.getDayNumber());

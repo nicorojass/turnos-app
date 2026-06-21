@@ -28,7 +28,7 @@ public class ServService {
     public ServResponse createService(UUID businessId, ServRequest request) {
 
     Business business = businessRepository.findByPublicId(businessId)
-        .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+        .orElseThrow(() -> new BusinessNotFoundException("We couldn't find the business you're looking for."));
 
     Serv service = ServMapper.toEntity(request);
     service.setBusiness(business);
@@ -36,14 +36,14 @@ public class ServService {
 
     if (serviceRepository.existsByBusinessIdAndNameAndDurationMinutesAndPriceAndDepositPorcentage(
         business.getId(), request.getName(), request.getDurationMinutes(), request.getPrice(), request.getDepositPorcentage())) {
-    throw new ServiceAlreadyExistsException("An identical service already exists for this business");
+    throw new ServiceAlreadyExistsException("A service with the same name, duration, price, and deposit already exists for this business. Please adjust at least one of those fields.");
 }
     return ServMapper.toResponse(serviceRepository.save(service));
 }
 
     public List<ServResponse> getServicesByBusinessId(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
-            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+            .orElseThrow(() -> new BusinessNotFoundException("We couldn't find the business you're looking for."));
         List<Serv> services = serviceRepository.findByBusinessId(business.getId());
         return services.stream()
                 .map(ServMapper::toResponse)
@@ -52,12 +52,12 @@ public class ServService {
 
     public ServResponse editService(UUID publicId, ServRequest request) {
     Serv service = serviceRepository.findByPublicId(publicId)
-        .orElseThrow(() -> new NotFoundException("Service not found"));
+        .orElseThrow(() -> new NotFoundException("We couldn't find the service you're looking for."));
 
     if (serviceRepository.existsByBusinessIdAndNameAndDurationMinutesAndPriceAndDepositPorcentage(
             service.getBusiness().getId(), request.getName(), request.getDurationMinutes(),
             request.getPrice(), request.getDepositPorcentage())) {
-        throw new ServiceAlreadyExistsException("An identical service already exists for this business");
+        throw new ServiceAlreadyExistsException("A service with the same name, duration, price, and deposit already exists for this business. Please adjust at least one of those fields.");
     }
 
     service.setName(request.getName());
@@ -70,7 +70,7 @@ public class ServService {
 
 
     public void deleteService(UUID publicId) {
-        Serv service = serviceRepository.findByPublicId(publicId).orElseThrow(() -> new NotFoundException("Service not found"));
+        Serv service = serviceRepository.findByPublicId(publicId).orElseThrow(() -> new NotFoundException("We couldn't find the service you're looking for."));
         service.setDeleted(true);
         serviceRepository.save(service);
     }
