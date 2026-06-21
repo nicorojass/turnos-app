@@ -44,4 +44,14 @@ public class AppointmentExpirationJob {
             appointmentRepository.save(appointment);
         }
     }
+
+    @Scheduled(fixedRate = 60000)
+    @Transactional
+    public void completeFinishedAppointments() {
+        List<Appointment> finished = appointmentRepository.findFinishedBookedAppointments(LocalDateTime.now());
+        for (Appointment appointment : finished) {
+            appointment.setStatus(AppointmentStatus.COMPLETED);
+            appointmentRepository.save(appointment);
+        }
+    }
 }

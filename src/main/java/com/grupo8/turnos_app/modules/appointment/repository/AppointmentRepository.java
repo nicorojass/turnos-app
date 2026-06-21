@@ -94,4 +94,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
   @Query("SELECT a FROM Appointment a WHERE a.status = 'AWAITING_PAYMENT' " +
     "AND a.reservedAt < :expiry")
   List<Appointment> findExpiredReservations(@Param("expiry") LocalDateTime expiry);
+
+  @Query("SELECT a FROM Appointment a JOIN a.deposit d " +
+    "WHERE a.status = 'BOOKED' AND a.endDatetime < :now AND d.status = 'PAID'")
+  List<Appointment> findFinishedBookedAppointments(@Param("now") LocalDateTime now);
 }
