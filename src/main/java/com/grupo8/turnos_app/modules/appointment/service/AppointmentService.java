@@ -200,19 +200,6 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
     return AppointmentMapper.toResponse(appointment);
 }
 
-  // COMPLETE APPOINTMENT | /complete
-  
-  public AppointmentResponse completeAppointment(UUID publicId) {
-    Appointment appointment = appointmentRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new NotFoundException("Turno no encontrado"));
-
-    if (appointment.getStatus() != AppointmentStatus.BOOKED)
-        throw new InvalidStatusException("Solo los turnos reservados pueden ser marcados como completados");
-
-    appointment.setStatus(AppointmentStatus.COMPLETED);
-    return AppointmentMapper.toResponse(appointmentRepository.save(appointment));
-}
-
   // CONFIRM DEPOSIT PAYMENT | /pay-deposit
 
   @Transactional

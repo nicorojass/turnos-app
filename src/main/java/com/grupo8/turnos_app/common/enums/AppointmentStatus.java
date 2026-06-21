@@ -5,6 +5,5 @@ public enum AppointmentStatus {
     AWAITING_PAYMENT,
     BOOKED,
     CANCELLED,
-    SUSPENDED,
-    COMPLETED
+    SUSPENDED
 }
