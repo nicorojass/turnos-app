@@ -1,5 +1,6 @@
 package com.grupo8.turnos_app.modules.users.services;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Set;
 import java.util.UUID;
@@ -49,7 +50,7 @@ public class UserService {
             .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
     if (Boolean.TRUE.equals(user.getActive())) {
-        if (appointmentRepository.hasPendingAppointmentsByUser(user.getId()))
+        if (appointmentRepository.hasPendingAppointmentsByUser(user.getId(), LocalDateTime.now()))
             throw new PendingAppointmentsException("El usuario tiene turnos pendientes y no puede ser desactivado");
 
         boolean isOwner = user.getRoles().stream()
@@ -57,7 +58,7 @@ public class UserService {
 
         if (isOwner) {
             businessRepository.findByOwnerId(user.getId()).ifPresent(business -> {
-                if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId()))
+                if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId(), LocalDateTime.now()))
                     throw new PendingAppointmentsException("El usuario tiene turnos pendientes y no puede ser desactivado");
                 business.setDeleted(true);
                 businessRepository.save(business);
@@ -76,7 +77,7 @@ public class UserService {
     public void forceDeleteUser(UUID publicId) {
         User user = userRepository.findByPublicId(publicId)
             .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
-        if (appointmentRepository.hasPendingAppointmentsByUser(user.getId())) {
+        if (appointmentRepository.hasPendingAppointmentsByUser(user.getId(), LocalDateTime.now())) {
         throw new PendingAppointmentsException("El usuario tiene turnos pendientes y no puede ser eliminado");
     }
         userRepository.delete(user);

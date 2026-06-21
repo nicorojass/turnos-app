@@ -68,12 +68,12 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
   Optional<Appointment> findByPublicId(UUID publicId);
 
   @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
-    "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT')")
-    boolean hasPendingAppointmentsByUser(@Param("userId") Long userId);
+    "AND ((a.status = 'BOOKED' AND a.endDatetime > :now) OR a.status = 'AWAITING_PAYMENT')")
+  boolean hasPendingAppointmentsByUser(@Param("userId") Long userId, @Param("now") LocalDateTime now);
 
   @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.business.id = :businessId " +
-    "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT')")
-    boolean hasPendingAppointmentsByBusiness(@Param("businessId") Long businessId);
+    "AND ((a.status = 'BOOKED' AND a.endDatetime > :now) OR a.status = 'AWAITING_PAYMENT')")
+  boolean hasPendingAppointmentsByBusiness(@Param("businessId") Long businessId, @Param("now") LocalDateTime now);
 
     @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
     "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT') " +

@@ -1,5 +1,6 @@
 package com.grupo8.turnos_app.modules.business.services;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -122,7 +123,7 @@ public class BusinessService {
         Business business = businessRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
-        if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId()))
+        if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId(), LocalDateTime.now()))
             throw new PendingAppointmentsException("El negocio tiene turnos pendientes y no puede ser eliminado");
 
         business.setDeleted(true);
@@ -132,7 +133,7 @@ public class BusinessService {
     public void forceDeleteBusiness(UUID publicId) {
         Business business = businessRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
-                if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId())) {
+                if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId(), LocalDateTime.now())) {
         throw new PendingAppointmentsException("El negocio tiene turnos pendientes y no puede ser eliminado");
     }
         businessRepository.delete(business);
