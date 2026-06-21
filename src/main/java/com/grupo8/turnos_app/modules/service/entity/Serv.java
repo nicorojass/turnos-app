@@ -14,6 +14,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Positive;
 import lombok.AllArgsConstructor;
@@ -39,15 +41,18 @@ public class Serv {
     private UUID publicId;
 
     @NotBlank
+    @Column(nullable = false, length = 80)
     private String name;
 
     @Positive
+    @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
 
-    @Column(name="deposit_porcentage")
+    @Column(name="deposit_porcentage", precision = 5, scale = 2)
     private BigDecimal depositPorcentage;
 
     @Positive
+    @Min(1) @Max(480)
     @Column(name="duration_minutes")
     private Integer durationMinutes;
 

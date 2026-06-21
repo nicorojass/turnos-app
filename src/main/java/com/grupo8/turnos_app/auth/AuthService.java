@@ -33,10 +33,10 @@ public class AuthService {
 
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmailAndActiveTrue(request.getEmail()))
-            throw new EmailAlreadyInUseException("Email already in use");
+            throw new EmailAlreadyInUseException("El email ya está en uso");
 
         Role ownerRole = roleRepository.findByName(RoleName.OWNER)
-                .orElseThrow(() -> new NotFoundException("Role OWNER not found"));
+                .orElseThrow(() -> new NotFoundException("Rol inexistente"));
 
         User user = User.builder()
                 .name(request.getName())
@@ -57,10 +57,10 @@ public class AuthService {
         );
 
         User user = userRepository.findByEmail(request.getEmail())
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
 
         if (!Boolean.TRUE.equals(user.getActive())){
-        throw new ForbiddenOperationException("This account has been deactivated");
+        throw new ForbiddenOperationException("Esta cuenta ha sido desactivada");
         }
 
         String token = jwtService.generateToken(user);
@@ -69,16 +69,16 @@ public class AuthService {
 
     public UserResponse getMe(String email) {
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new NotFoundException("User not found"));
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
         return UserMapper.toResponse(user);
     }
 
     public AuthResponse registerClient(RegisterRequest request) {
     if (userRepository.existsByEmailAndActiveTrue(request.getEmail()))
-        throw new EmailAlreadyInUseException("Email already in use");
+        throw new EmailAlreadyInUseException("El email ya está en uso");
 
     Role clientRole = roleRepository.findByName(RoleName.CLIENT)
-            .orElseThrow(() -> new NotFoundException("Role CLIENT not found"));
+            .orElseThrow(() -> new NotFoundException("Rol inexistente"));
 
     User user = User.builder()
             .name(request.getName())

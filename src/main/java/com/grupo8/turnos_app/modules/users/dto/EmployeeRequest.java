@@ -13,16 +13,16 @@ import lombok.Setter;
 @NoArgsConstructor
 public class EmployeeRequest {
 
-    @NotBlank(message = "Name is required")
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "Name must not contain numbers")
+    @NotBlank(message = "Ingresa el nombre del empleado")
+    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "El nombre del empleado solo puede contener letras y espacios")
     private String name;
 
     @Email
     @NotBlank
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 6, max = 64, message = "Password must be between 8 and 64 characters")
-    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[\\x00-\\x7F]+$", message = "Password must contain uppercase, lowercase, a number and only standard characters")
+    @NotBlank(message = "Ingresa la contraseña del empleado")
+    @Size(min = 6, max = 64, message = "La contraseña debe tener entre 8 y 64 caracteres")
+    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[\\x00-\\x7F]+$", message = "La contraseña debe contener mayúsculas, minúsculas, un número y no puede contener caracteres especiales")
     private String password;
 }
