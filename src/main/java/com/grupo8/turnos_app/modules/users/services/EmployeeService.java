@@ -1,5 +1,6 @@
 package com.grupo8.turnos_app.modules.users.services;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -10,6 +11,8 @@ import com.grupo8.turnos_app.common.enums.RoleName;
 import com.grupo8.turnos_app.common.exception.EmailAlreadyInUseException;
 import com.grupo8.turnos_app.common.exception.ForbiddenOperationException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
+import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
@@ -31,6 +34,7 @@ public class EmployeeService {
     private final RoleRepository roleRepository;
     private final BusinessRepository businessRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AppointmentRepository appointmentRepository;
 
     public List<UserResponse> getEmployeesByBusiness(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
@@ -99,6 +103,10 @@ public class EmployeeService {
     public void removeEmployee(UUID publicId) {
         User employee = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+
+        if (appointmentRepository.hasPendingAppointmentsByEmployee(employee.getId(), LocalDateTime.now())) {
+            throw new PendingAppointmentsException("Employee has pending appointments and cannot be removed");
+        }
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
                 .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));

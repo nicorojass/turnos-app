@@ -126,6 +126,11 @@ public class BusinessService {
         if (appointmentRepository.hasPendingAppointmentsByBusiness(business.getId(), LocalDateTime.now()))
             throw new PendingAppointmentsException("El negocio tiene turnos pendientes y no puede ser eliminado");
 
+        for (User employee : business.getEmployees()) {
+        employee.setActive(false);
+        userRepository.save(employee);
+        }
+        
         business.setDeleted(true);
         businessRepository.save(business);
     }
