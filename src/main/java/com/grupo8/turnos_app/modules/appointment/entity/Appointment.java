@@ -51,22 +51,22 @@ public class Appointment {
   private LocalDateTime endDatetime;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Column(nullable = false, length = 20)
   private AppointmentStatus status;
 
   // client data if who books the appointment isnt registered
-  @Column(name = "client_name")
+  @Column(name = "client_name", length = 100)
   private String clientName;
 
-  @Column(name = "client_email")
+  @Column(name = "client_email", length = 255)
   private String clientEmail;
 
-  @Column(name = "client_phone")
+  @Column(name = "client_phone", length = 20)
   private String clientPhone;
 
   // service's price at booking moment, so it stays protected from price
   // variations on service
-  @Column(nullable = false)
+  @Column(nullable = false, precision = 12, scale = 2)
   private BigDecimal price;
 
   // appointment creation timestapm

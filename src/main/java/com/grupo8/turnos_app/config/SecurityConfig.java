@@ -32,7 +32,7 @@ public class SecurityConfig {
   @Bean
   public UserDetailsService userDetailsService() {
     return username -> userRepository.findByEmail(username)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
   }
 
   @Bean
@@ -89,7 +89,6 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/pay-deposit").permitAll()
             .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/cancel").authenticated()
             .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/suspend").hasRole("OWNER")
-            .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/complete").hasRole("OWNER")
             .requestMatchers(HttpMethod.DELETE, "/api/v1/appointments/*").hasRole("OWNER")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/today").hasRole("OWNER")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments").hasRole("OWNER")

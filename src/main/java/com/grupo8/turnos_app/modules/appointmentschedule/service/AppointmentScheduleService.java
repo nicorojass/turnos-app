@@ -45,20 +45,20 @@ public class AppointmentScheduleService {
 
     public AppointmentScheduleResponse create(UUID businessId, AppointmentScheduleRequest request) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new NotFoundException("Business not found"));
+                .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
-                .orElseThrow(() -> new NotFoundException("Service not found"));
+                .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
         long scheduleMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
         if (scheduleMinutes < service.getDurationMinutes()) {
-            throw new InvalidScheduleRangeException("The time range must be at least as long as the service duration");
+            throw new InvalidScheduleRangeException("El rango de tiempo debe ser al menos tan largo como la duración del servicio");
         }
 
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findByPublicId(request.getEmployeeId())
-                    .orElseThrow(() -> new NotFoundException("Employee not found"));
+                    .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
         }
 
         Long employeeId = employee != null ? employee.getId() : null;
@@ -66,7 +66,7 @@ public class AppointmentScheduleService {
         if (appointmentScheduleRepository.existsConflictingSchedule(
                 business.getId(), request.getDayNumber(), request.getStartTime(), request.getEndTime(),
                 employeeId, null)) {
-            throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day, time and employee");
+            throw new AppointmentScheduleAlreadyExistsException("Ya existe un horario para este día, hora y empleado");
         }
 
         AppointmentSchedule schedule = AppointmentScheduleMapper.toEntity(request);
@@ -84,23 +84,23 @@ public class AppointmentScheduleService {
 
     public void delete(UUID publicId) {
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new NotFoundException("Appointment schedule not found"));
+                .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
         appointmentScheduleRepository.delete(schedule);
     }
 
     public AppointmentScheduleResponse update(UUID businessId, UUID publicId, AppointmentScheduleRequest request) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new NotFoundException("Business not found"));
+                .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new NotFoundException("Appointment schedule not found"));
+                .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
-                .orElseThrow(() -> new NotFoundException("Service not found"));
+                .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findByPublicId(request.getEmployeeId())
-                    .orElseThrow(() -> new NotFoundException("Employee not found"));
+                    .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
         }
 
         Long employeeId = employee != null ? employee.getId() : null;
@@ -108,7 +108,7 @@ public class AppointmentScheduleService {
         if (appointmentScheduleRepository.existsConflictingSchedule(
                 business.getId(), request.getDayNumber(), request.getStartTime(), request.getEndTime(),
                 employeeId, schedule.getId())) {
-            throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day, time and employee");
+            throw new AppointmentScheduleAlreadyExistsException("Ya existe un horario para este día, hora y empleado");
         }
 
         schedule.setDayNumber(request.getDayNumber());

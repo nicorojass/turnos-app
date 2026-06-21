@@ -19,15 +19,15 @@ import lombok.Setter;
 @Builder
 public class AppointmentScheduleRequest {
 
-    @NotNull(message = "Day number is required")
-    @Min(value = 0, message = "Day number must be between 0 and 6")
-    @Max(value = 6, message = "Day number must be between 0 and 6")
+    @NotNull(message = "El día es obligatorio")
+    @Min(value = 0, message = "El día debe estar entre 0 y 6")
+    @Max(value = 6, message = "El día debe estar entre 0 y 6")
     private Integer dayNumber;
 
-    @NotNull(message = "Start time is required")
+    @NotNull(message = "Ingresa la hora de inicio")
     private LocalTime startTime;
 
-    @NotNull(message = "End time is required")
+    @NotNull(message = "Ingresa la hora de finalización")
     private LocalTime endTime;
 
     @NotNull(message = "Service ID is required")

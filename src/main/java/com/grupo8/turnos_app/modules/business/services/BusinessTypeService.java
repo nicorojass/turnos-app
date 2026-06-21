@@ -23,7 +23,7 @@ public class BusinessTypeService {
 
     public BusinessTypeResponse createBusinessType(BusinessTypeRequest request) {
         if (businessTypeRepository.existsByName(request.getName()))
-            throw new BusinessAlreadyExistsException("A business type with that name already exists");
+            throw new BusinessAlreadyExistsException(" Ya existe un rubro con ese nombre ");
 
         BusinessType businessType = BusinessTypeMapper.toEntity(request);
         return BusinessTypeMapper.toResponse(businessTypeRepository.save(businessType));
@@ -38,7 +38,7 @@ public class BusinessTypeService {
 
     public BusinessTypeResponse updateBusinessType(UUID publicId, BusinessTypeRequest request) {
         BusinessType businessType = businessTypeRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
+                .orElseThrow(() -> new BusinessTypeNotFoundException("Rubro no encontrado"));
 
         businessType.setName(request.getName());
         return BusinessTypeMapper.toResponse(businessTypeRepository.save(businessType));
@@ -46,7 +46,7 @@ public class BusinessTypeService {
 
     public void toggleBusinessTypeDeleted(UUID publicId) {
         BusinessType businessType = businessTypeRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
+                .orElseThrow(() -> new BusinessTypeNotFoundException("Rubro no encontrado"));
 
         businessType.setDeleted(!businessType.getDeleted());
         businessTypeRepository.save(businessType);

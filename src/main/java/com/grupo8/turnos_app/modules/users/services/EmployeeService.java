@@ -34,7 +34,7 @@ public class EmployeeService {
 
     public List<UserResponse> getEmployeesByBusiness(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
         return business.getEmployees().stream()
                 .map(UserMapper::toResponse)
                 .toList();
@@ -42,16 +42,16 @@ public class EmployeeService {
 
     public UserResponse createEmployee(UUID businessId, EmployeeRequest request, String ownerEmail) {
         Business business = businessRepository.findByPublicId(businessId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
         User owner = userRepository.findByEmail(ownerEmail)
-                .orElseThrow(() -> new NotFoundException("Owner not found"));
+                .orElseThrow(() -> new NotFoundException("Dueño no encontrado"));
 
         if (!business.getOwner().getId().equals(owner.getId()))
-            throw new ForbiddenOperationException("You are not the owner of this business");
+            throw new ForbiddenOperationException("No tenes permisos para agregar empleados a este negocio");
 
         if (userRepository.existsByEmail(request.getEmail()))
-            throw new EmailAlreadyInUseException("Email already in use");
+            throw new EmailAlreadyInUseException("Ya existe una cuenta con este email");
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
                 .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
@@ -72,10 +72,10 @@ public class EmployeeService {
 
     public UserResponse getEmployee(UUID publicId) {
     User employee = userRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new NotFoundException("Employee not found"));
+            .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
 
     if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
-        throw new NotFoundException("Employee not found");
+        throw new NotFoundException("Empleado no encontrado");
         }
 
         return UserMapper.toResponse(employee);
@@ -83,10 +83,10 @@ public class EmployeeService {
 
     public UserResponse updateEmployee(UUID publicId, EmployeeRequest request) {
         User employee = userRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+                .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
                 
         if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
-        throw new ForbiddenOperationException("This user is not an employee");
+        throw new ForbiddenOperationException("El usuario a modificar no es un empleado");
         }
         employee.setName(request.getName());
         employee.setEmail(request.getEmail());
@@ -98,7 +98,7 @@ public class EmployeeService {
 
     public void removeEmployee(UUID publicId) {
         User employee = userRepository.findByPublicId(publicId)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+                .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
                 .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));

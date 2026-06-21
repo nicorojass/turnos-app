@@ -144,7 +144,7 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
         appointment.setClientEmail(clientUser.getEmail());
     } else {
         if (request.getClientName() == null || request.getClientEmail() == null) {
-            throw new IllegalArgumentException("Name and email are required for unauthenticated bookings");
+            throw new IllegalArgumentException("Ingresa tu nombre y email para reservar el turno.");
         }
         appointment.setClientName(request.getClientName());
         appointment.setClientEmail(request.getClientEmail());
@@ -155,7 +155,7 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
     // check for overlapping appointments
     if (clientUser != null && appointmentRepository.hasOverlappingAppointment(
             clientUser.getId(), appointment.getStartDatetime(), appointment.getEndDatetime())) {
-        throw new AppointmentConflictException("You already have an appointment at this time");
+        throw new AppointmentConflictException("Ya tenés un turno reservado en este horario.");
     }
 
     // anti-spam: no se puede reservar si ya tenés un turno pendiente de pago
@@ -198,19 +198,6 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
     appointment.setDeposit(deposit);
 
     return AppointmentMapper.toResponse(appointment);
-}
-
-  // COMPLETE APPOINTMENT | /complete
-  
-  public AppointmentResponse completeAppointment(UUID publicId) {
-    Appointment appointment = appointmentRepository.findByPublicId(publicId)
-            .orElseThrow(() -> new NotFoundException("Appointment not found"));
-
-    if (appointment.getStatus() != AppointmentStatus.BOOKED)
-        throw new InvalidStatusException("Only BOOKED appointments can be marked as completed");
-
-    appointment.setStatus(AppointmentStatus.COMPLETED);
-    return AppointmentMapper.toResponse(appointmentRepository.save(appointment));
 }
 
   // CONFIRM DEPOSIT PAYMENT | /pay-deposit
