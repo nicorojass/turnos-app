@@ -331,13 +331,38 @@ Si `dateFrom` y `dateTo` están presentes, tienen prioridad sobre `period`.
 
 ## Flujo de generación de turnos
 
-Los turnos se generan a partir de **plantillas** (`AppointmentSchedule`). Cada plantilla define un bloque recurrente semanal: día de la semana, horario de inicio y fin, servicio y empleado opcional.
+Los turnos se generan a partir de dos configuraciones:
 
-El generador (`AppointmentGeneratorService`) toma cada plantilla y crea slots `UNBOOKED` individuales según la duración del servicio, para los próximos N días (configurado en `scheduleDaysToCreate` del negocio).
+- **`DaySchedule`**: define qué días de la semana están habilitados para el negocio y en qué horario.
+- **`AppointmentSchedule`**: plantilla semanal recurrente que define un turno específico — día, hora de inicio, hora de fin, servicio y empleado opcional.
 
-**Ejemplo:** plantilla viernes 09:00-12:00, servicio de 30 min → genera turnos a las 09:00, 09:30, 10:00... para cada viernes dentro del rango.
+Cada `AppointmentSchedule` genera **exactamente un turno** (`UNBOOKED`) por cada fecha que coincida con su día de la semana y tenga el `DaySchedule` habilitado.
 
-La generación corre automáticamente **todos los días a las 01:00** y también puede dispararse manualmente con `POST /appointment-schedules/generate`.
+**Ejemplo:** plantilla lunes 10:00-10:30, servicio "Corte de pelo" → genera un turno a las 10:00 (turno programado (appointmentSchedule) perteneciente al daySchedule (dia de la semana)) cada lunes (daySchedule) dentro del rango de la agenda.
+
+### Activación
+
+La generación automática requiere que el negocio tenga `automaticSchedule: true`. Los campos relacionados en el negocio son:
+
+| Campo | Default | Descripción |
+|---|---|---|
+| `automaticSchedule` | `false` | Habilita la generación automática |
+| `scheduleDaysToCreate` | `30` | Días de agenda a generar por adelantado |
+| `scheduleAnticipation` | `5` | Días antes del fin de agenda para regenerar |
+| `scheduleEnd` | `null` | Horizonte actual de la agenda. Se actualiza automáticamente |
+
+### Cuándo se generan turnos
+
+| Evento | Comportamiento |
+|---|---|
+| Se activa `automaticSchedule` en un negocio | Genera desde hoy hasta `hoy + scheduleDaysToCreate`. Setea `scheduleEnd` |
+| Se crea un `AppointmentSchedule` nuevo | Genera ese turno desde hoy hasta `scheduleEnd` actual (sin modificar `scheduleEnd`) |
+| Cron diario a las **02:00** | Para cada negocio con `automaticSchedule: true`: si `scheduleEnd - hoy <= scheduleAnticipation`, extiende la agenda `scheduleDaysToCreate` días más desde `scheduleEnd` y actualiza `scheduleEnd` |
+| Endpoint manual `POST /appointment-schedules/generate` | Igual que al crear un `AppointmentSchedule`. Idempotente — no genera duplicados |
+
+### Ventana deslizante
+
+El cron no regenera desde cero sino que extiende la ventana existente. Si la agenda cubre hasta el 1 de julio y `scheduleDaysToCreate = 30`, cuando el cron detecte que quedan ≤ `scheduleAnticipation` días hasta ese límite, genera los siguientes 30 días y mueve `scheduleEnd` al 31 de julio.
 
 ---
 
