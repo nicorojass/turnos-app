@@ -106,6 +106,9 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.POST, "/api/v1/businesses/*/appointment-schedules/generate").hasRole("OWNER")
             .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/complete").hasRole("OWNER")
+            // stats endpoints
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/stats").authenticated()
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/stats/employees/*").authenticated()
             .anyRequest().authenticated()
         )
         .authenticationProvider(authenticationProvider())

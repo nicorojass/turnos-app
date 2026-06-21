@@ -1,6 +1,7 @@
 
 package com.grupo8.turnos_app.modules.appointment.repository;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -94,4 +95,220 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
   @Query("SELECT a FROM Appointment a WHERE a.status = 'AWAITING_PAYMENT' " +
     "AND a.reservedAt < :expiry")
   List<Appointment> findExpiredReservations(@Param("expiry") LocalDateTime expiry);
+
+  // ---- stats queries ----
+
+  // count by status for a business in a date range
+  @Query("SELECT COUNT(a) FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status = :status AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countByBusinessAndStatus(
+    @Param("businessId") Long businessId,
+    @Param("status") com.grupo8.turnos_app.common.enums.AppointmentStatus status,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to);
+
+  // finished = booked and past
+  @Query("SELECT COUNT(a) FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countFinishedByBusiness(
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  // upcoming = booked and future
+  @Query("SELECT COUNT(a) FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status = 'BOOKED' AND a.endDatetime >= :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countUpcomingByBusiness(
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  // revenue from finished appointments
+  @Query("SELECT COALESCE(SUM(a.price), 0) FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  BigDecimal sumRevenueFinishedByBusiness(
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  // breakdown by service: [serviceName, count, sumPrice]
+  @Query("SELECT a.service.name, COUNT(a), COALESCE(SUM(a.price), 0) " +
+    "FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to " +
+    "GROUP BY a.service.name ORDER BY COUNT(a) DESC")
+  List<Object[]> statsGroupedByService(
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  // breakdown by employee: [employeePublicId, employeeName, count, sumPrice]
+  @Query("SELECT a.employee.publicId, a.employee.name, COUNT(a), COALESCE(SUM(a.price), 0) " +
+    "FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.employee IS NOT NULL AND a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to " +
+    "GROUP BY a.employee.publicId, a.employee.name ORDER BY COUNT(a) DESC")
+  List<Object[]> statsGroupedByEmployee(
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  // peak days: [dayOfWeek int (mysql: 1=sun..7=sat), count]
+  @Query("SELECT FUNCTION('DAYOFWEEK', a.startDatetime), COUNT(a) " +
+    "FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status = 'BOOKED' AND a.startDatetime >= :from AND a.startDatetime < :to " +
+    "GROUP BY FUNCTION('DAYOFWEEK', a.startDatetime) ORDER BY COUNT(a) DESC")
+  List<Object[]> statsGroupedByDayOfWeek(
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to);
+
+  // unique registered clients that had a finished appointment
+  @Query("SELECT COUNT(DISTINCT a.clientUser.id) FROM Appointment a " +
+    "WHERE a.business.id = :businessId AND a.clientUser IS NOT NULL " +
+    "AND a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countUniqueRegisteredClients(
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  // ---- employee-specific stats ----
+
+  @Query("SELECT COUNT(a) FROM Appointment a WHERE a.employee.id = :employeeId " +
+    "AND a.business.id = :businessId " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countByEmployee(
+    @Param("employeeId") Long employeeId,
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to);
+
+  @Query("SELECT COUNT(a) FROM Appointment a WHERE a.employee.id = :employeeId " +
+    "AND a.business.id = :businessId AND a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countFinishedByEmployee(
+    @Param("employeeId") Long employeeId,
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  @Query("SELECT COUNT(a) FROM Appointment a WHERE a.employee.id = :employeeId " +
+    "AND a.business.id = :businessId AND a.status = 'BOOKED' AND a.endDatetime >= :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countUpcomingByEmployee(
+    @Param("employeeId") Long employeeId,
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  @Query("SELECT COUNT(a) FROM Appointment a WHERE a.employee.id = :employeeId " +
+    "AND a.business.id = :businessId AND a.status = 'CANCELLED' " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countCancelledByEmployee(
+    @Param("employeeId") Long employeeId,
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to);
+
+  // sum service duration minutes for hours-worked calc
+  @Query("SELECT COALESCE(SUM(a.service.durationMinutes), 0) FROM Appointment a " +
+    "WHERE a.employee.id = :employeeId AND a.business.id = :businessId " +
+    "AND a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long sumMinutesWorkedByEmployee(
+    @Param("employeeId") Long employeeId,
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  @Query("SELECT COALESCE(SUM(a.price), 0) FROM Appointment a " +
+    "WHERE a.employee.id = :employeeId AND a.business.id = :businessId " +
+    "AND a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  BigDecimal sumRevenueByEmployee(
+    @Param("employeeId") Long employeeId,
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  // [serviceName, count] for employee breakdown
+  @Query("SELECT a.service.name, COUNT(a) FROM Appointment a " +
+    "WHERE a.employee.id = :employeeId AND a.business.id = :businessId " +
+    "AND a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to " +
+    "GROUP BY a.service.name ORDER BY COUNT(a) DESC")
+  List<Object[]> statsGroupedByServiceForEmployee(
+    @Param("employeeId") Long employeeId,
+    @Param("businessId") Long businessId,
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  // ---- admin global stats ----
+
+  @Query("SELECT COUNT(a) FROM Appointment a " +
+    "WHERE a.startDatetime >= :from AND a.startDatetime < :to")
+  long countAllInRange(
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to);
+
+  @Query("SELECT COUNT(a) FROM Appointment a " +
+    "WHERE a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countAllFinishedInRange(
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  @Query("SELECT COUNT(a) FROM Appointment a " +
+    "WHERE a.status = 'CANCELLED' AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countAllCancelledInRange(
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to);
+
+  @Query("SELECT COUNT(a) FROM Appointment a " +
+    "WHERE a.status = 'SUSPENDED' AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countAllSuspendedInRange(
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to);
+
+  @Query("SELECT COALESCE(SUM(a.price), 0) FROM Appointment a " +
+    "WHERE a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  BigDecimal sumAllRevenueInRange(
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now);
+
+  // [businessName, count, sumPrice] top businesses
+  @Query("SELECT a.business.name, COUNT(a), COALESCE(SUM(a.price), 0) " +
+    "FROM Appointment a WHERE a.status = 'BOOKED' AND a.endDatetime < :now " +
+    "AND a.startDatetime >= :from AND a.startDatetime < :to " +
+    "GROUP BY a.business.name ORDER BY COUNT(a) DESC")
+  List<Object[]> topBusinessesByAppointments(
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to,
+    @Param("now") LocalDateTime now,
+    Pageable pageable);
+
+  // count distinct businesses that had at least one booked appointment in period
+  @Query("SELECT COUNT(DISTINCT a.business.id) FROM Appointment a " +
+    "WHERE a.status = 'BOOKED' AND a.startDatetime >= :from AND a.startDatetime < :to")
+  long countActiveBusinessesInRange(
+    @Param("from") LocalDateTime from,
+    @Param("to") LocalDateTime to);
 }

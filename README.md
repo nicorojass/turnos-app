@@ -187,13 +187,145 @@ El token se obtiene en `POST /api/v1/auth/login`.
 
 ### Administración `/api/v1/admin/users`
 
-| Método | Path          | Descripción                     | Acceso |
-| ------ | ------------- | ------------------------------- | ------ |
-| GET    | `/`           | Listar todos los usuarios.      | ADMIN  |
-| GET    | `/{id}`       | Ver usuario + roles.            | ADMIN  |
-| PATCH  | `/{id}/roles` | Asignar / quitar roles.         | ADMIN  |
-| PATCH  | `/{id}/active`| Activar / desactivar usuario.   | ADMIN  |
-| DELETE | `/{id}`       | Hard delete de usuario.         | ADMIN  |
+| Método | Path           | Descripción                   | Acceso |
+| ------ | -------------- | ----------------------------- | ------ |
+| GET    | `/`            | Listar todos los usuarios.    | ADMIN  |
+| GET    | `/{id}`        | Ver usuario + roles.          | ADMIN  |
+| PATCH  | `/{id}/roles`  | Asignar / quitar roles.       | ADMIN  |
+| PATCH  | `/{id}/active` | Activar / desactivar usuario. | ADMIN  |
+| DELETE | `/{id}`        | Hard delete de usuario.       | ADMIN  |
+
+### Estadísticas `/api/v1`
+
+| Método | Path                                          | Descripción                              | Acceso              |
+| ------ | --------------------------------------------- | ---------------------------------------- | ------------------- |
+| GET    | `/businesses/{id}/stats`                      | Estadísticas globales del negocio.       | OWNER               |
+| GET    | `/businesses/{id}/stats/employees/{empId}`    | Estadísticas individuales del empleado.  | OWNER / propio EMPLOYEE |
+| GET    | `/admin/stats`                                | Métricas globales de la plataforma.      | ADMIN               |
+
+**Query params disponibles en los tres endpoints:**
+
+| Param      | Valores                          | Default  |
+| ---------- | -------------------------------- | -------- |
+| `period`   | `TODAY`, `WEEK`, `MONTH`, `YEAR` | `MONTH`  |
+| `dateFrom` | fecha ISO (`2026-01-01`)         | —        |
+| `dateTo`   | fecha ISO (`2026-03-31`)         | —        |
+
+Si `dateFrom` y `dateTo` están presentes, tienen prioridad sobre `period`.
+
+#### `GET /businesses/{id}/stats` — métricas del negocio
+
+```json
+{
+  "period": { "from": "2026-06-01", "to": "2026-06-30" },
+  "appointments": {
+    "total": 120,
+    "finished": 80,
+    "upcoming": 15,
+    "cancelled": 18,
+    "suspended": 7,
+    "occupancyRate": 79.17,
+    "cancellationRate": 15.97
+  },
+  "revenue": {
+    "totalFromFinished": 450000.00,
+    "depositsCollected": 85000.00,
+    "depositsRefunded": 12000.00,
+    "depositsForfeited": 8000.00
+  },
+  "byService": [
+    { "serviceName": "Corte", "appointmentCount": 50, "revenue": 180000.00 }
+  ],
+  "byEmployee": [
+    { "employeeId": "uuid", "employeeName": "Juan", "appointmentCount": 40, "revenue": 200000.00 }
+  ],
+  "peakDays": [
+    { "dayOfWeek": "FRIDAY", "appointmentCount": 25 }
+  ],
+  "uniqueClientsCount": 62
+}
+```
+
+| Campo | Descripción |
+| ----- | ----------- |
+| `finished` | Turnos con `status = BOOKED` cuya `endDatetime` ya pasó |
+| `upcoming` | Turnos con `status = BOOKED` cuya `endDatetime` es futura |
+| `occupancyRate` | `(finished + upcoming) / total × 100` |
+| `cancellationRate` | `cancelled / (finished + upcoming + cancelled) × 100` |
+| `totalFromFinished` | Suma de `price` de los turnos finalizados |
+| `depositsCollected` | Señas con estado `PAID` en el período |
+| `depositsRefunded` | Señas devueltas por cancelación anticipada (≥ 24 hs) |
+| `depositsForfeited` | Señas retenidas por cancelación tardía (< 24 hs) |
+| `byService` | Turnos finalizados y revenue agrupados por servicio |
+| `byEmployee` | Turnos finalizados y revenue agrupados por empleado |
+| `peakDays` | Días de la semana ordenados por cantidad de turnos reservados |
+| `uniqueClientsCount` | Clientes registrados distintos atendidos en el período |
+
+#### `GET /businesses/{id}/stats/employees/{empId}` — métricas del empleado
+
+```json
+{
+  "employeeId": "uuid",
+  "employeeName": "Juan",
+  "period": { "from": "2026-06-16", "to": "2026-06-22" },
+  "appointments": {
+    "total": 18,
+    "finished": 12,
+    "upcoming": 3,
+    "cancelled": 3,
+    "occupancyRate": 83.33
+  },
+  "hoursWorked": 6.0,
+  "revenueGenerated": 54000.00,
+  "byService": [
+    { "serviceName": "Corte", "appointmentCount": 10, "revenue": 0 }
+  ]
+}
+```
+
+| Campo | Descripción |
+| ----- | ----------- |
+| `hoursWorked` | Suma de `durationMinutes` de los servicios en turnos finalizados, convertida a horas |
+| `revenueGenerated` | Suma de `price` de los turnos finalizados propios del empleado |
+| `byService` | Distribución de servicios realizados por el empleado en el período |
+
+#### `GET /admin/stats` — métricas de la plataforma
+
+```json
+{
+  "period": { "from": "2026-01-01", "to": "2026-12-31" },
+  "totalBusinesses": 45,
+  "activeBusinessesInPeriod": 38,
+  "totalUsers": 320,
+  "newUsersInPeriod": 85,
+  "appointments": {
+    "total": 5400,
+    "finished": 3800,
+    "cancelled": 610,
+    "suspended": 90
+  },
+  "revenue": {
+    "totalFromFinished": 12500000.00,
+    "depositsCollected": 2300000.00,
+    "depositsRefunded": 340000.00,
+    "depositsForfeited": 180000.00
+  },
+  "topBusinesses": [
+    { "businessName": "Peluquería Sol", "appointmentCount": 320, "revenue": 980000.00 }
+  ],
+  "userGrowth": [
+    { "year": 2026, "month": 1, "newUsers": 12 },
+    { "year": 2026, "month": 6, "newUsers": 28 }
+  ]
+}
+```
+
+| Campo | Descripción |
+| ----- | ----------- |
+| `activeBusinessesInPeriod` | Negocios con al menos un turno `BOOKED` en el período |
+| `newUsersInPeriod` | Usuarios registrados durante el período filtrado |
+| `topBusinesses` | Top 10 negocios por cantidad de turnos finalizados |
+| `userGrowth` | Nuevos registros de usuarios por mes en los últimos 6 meses |
 
 ---
 
