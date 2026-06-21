@@ -76,6 +76,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     "AND ((a.status = 'BOOKED' AND a.endDatetime > :now) OR a.status = 'AWAITING_PAYMENT')")
   boolean hasPendingAppointmentsByBusiness(@Param("businessId") Long businessId, @Param("now") LocalDateTime now);
 
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.employee.id = :employeeId " +
+    "AND ((a.status = 'BOOKED' AND a.endDatetime > :now) OR a.status = 'AWAITING_PAYMENT')")
+  boolean hasPendingAppointmentsByEmployee(@Param("employeeId") Long employeeId, @Param("now") LocalDateTime now);
+
     @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
     "AND a.status IN ('BOOKED', 'AWAITING_PAYMENT') " +
     "AND a.startDatetime < :endDatetime AND a.endDatetime > :startDatetime")

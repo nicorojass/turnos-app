@@ -22,7 +22,7 @@ public class EmployeeRequest {
     private String email;
 
     @NotBlank(message = "Ingresa la contraseña del empleado")
-    @Size(min = 6, max = 64, message = "La contraseña debe tener entre 8 y 64 caracteres")
+    @Size(min = 8, max = 64, message = "La contraseña debe tener entre 8 y 64 caracteres")
     @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9])[\\x00-\\x7F]+$", message = "La contraseña debe contener mayúsculas, minúsculas, un número y no puede contener caracteres especiales")
     private String password;
 }
