@@ -31,6 +31,8 @@ import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.deposit.entity.Deposit;
 import com.grupo8.turnos_app.modules.deposit.repository.DepositRepository;
+import com.grupo8.turnos_app.modules.service.entity.Serv;
+import com.grupo8.turnos_app.modules.service.repository.ServRepository;
 import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
 
@@ -44,6 +46,8 @@ public class AppointmentService {
   private final BusinessRepository businessRepository;
   private final DepositRepository depositRepository;
   private final UserRepository userRepository;
+  private final ServRepository serviceRepository;
+  
 
   // -------- QUERY SERVICES ------------
 
@@ -83,14 +87,20 @@ public class AppointmentService {
   @Transactional(readOnly = true)
   public List<AppointmentResponse> getAvailableSlots(
       UUID businessId,
-      Long serviceId,
-      Long employeeId) {
+      UUID serviceId,
+      UUID employeeId) {
 
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new NotFoundException("Business not found"));
-
+    
+    Serv service = serviceRepository.findByPublicId(serviceId)
+        .orElseThrow(() -> new NotFoundException("Service not found"));
+    
+    User employee = userRepository.findByPublicId(employeeId)
+        .orElseThrow(() -> new NotFoundException("Employee not found"));
+    
     return appointmentRepository
-        .findAvailableSlots(business.getId(), LocalDateTime.now(), serviceId, employeeId)
+        .findAvailableSlots(business.getId(), LocalDateTime.now(), service.getId(), employee.getId())
         .stream()
         .map(appointment -> AppointmentMapper.toResponse(appointment))
         .collect(java.util.stream.Collectors.toList());
