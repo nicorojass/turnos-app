@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -31,6 +32,7 @@ import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.deposit.entity.Deposit;
 import com.grupo8.turnos_app.modules.deposit.repository.DepositRepository;
+import com.grupo8.turnos_app.modules.service.repository.ServRepository;
 import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
 
@@ -44,6 +46,8 @@ public class AppointmentService {
   private final BusinessRepository businessRepository;
   private final DepositRepository depositRepository;
   private final UserRepository userRepository;
+  private final ServRepository serviceRepository;
+  
 
   // -------- QUERY SERVICES ------------
 
@@ -82,19 +86,33 @@ public class AppointmentService {
   // returns future UNBOOKED slots for the public endpoint with optional filters
   @Transactional(readOnly = true)
   public List<AppointmentResponse> getAvailableSlots(
-      UUID businessId,
-      Long serviceId,
-      Long employeeId) {
+    UUID businessId,
+    UUID serviceId,
+    UUID employeeId) {
 
-    Business business = businessRepository.findByPublicId(businessId)
-        .orElseThrow(() -> new NotFoundException("Business not found"));
+  Business business = businessRepository.findByPublicId(businessId)
+      .orElseThrow(() -> new NotFoundException("Business not found"));
 
-    return appointmentRepository
-        .findAvailableSlots(business.getId(), LocalDateTime.now(), serviceId, employeeId)
-        .stream()
-        .map(appointment -> AppointmentMapper.toResponse(appointment))
-        .collect(java.util.stream.Collectors.toList());
+  Long serviceInternalId = null;
+  if (serviceId != null) {
+      serviceInternalId = serviceRepository.findByPublicId(serviceId)
+              .orElseThrow(() -> new NotFoundException("Service not found"))
+              .getId();
   }
+
+  Long employeeInternalId = null;
+  if (employeeId != null) {
+      employeeInternalId = userRepository.findByPublicId(employeeId)
+              .orElseThrow(() -> new NotFoundException("Employee not found"))
+              .getId();
+  }
+
+  return appointmentRepository
+      .findAvailableSlots(business.getId(), LocalDateTime.now(), serviceInternalId, employeeInternalId)
+      .stream()
+      .map(AppointmentMapper::toResponse)
+      .collect(Collectors.toList());
+}
 
   // returns all appointments for authed client
   @Transactional(readOnly = true)

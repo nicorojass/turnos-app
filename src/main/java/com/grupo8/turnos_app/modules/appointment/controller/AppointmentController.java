@@ -79,8 +79,8 @@ public class AppointmentController {
     @GetMapping("/businesses/{businessId}/appointments/public")
     public ResponseEntity<List<AppointmentResponse>> getAvailableSlots(
             @PathVariable UUID businessId,
-            @RequestParam(required = false) Long serviceId,
-            @RequestParam(required = false) Long employeeId) {
+            @RequestParam(required = false) UUID serviceId,
+            @RequestParam(required = false) UUID employeeId) {
         return ResponseEntity.ok(
                 appointmentService.getAvailableSlots(businessId, serviceId, employeeId));
     }
