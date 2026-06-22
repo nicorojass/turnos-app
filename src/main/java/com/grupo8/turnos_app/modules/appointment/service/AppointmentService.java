@@ -208,12 +208,19 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
             .multiply(depositPercentage)
             .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
 
-    // create deposit with pending status
-    Deposit deposit = Deposit.builder()
-            .appointment(appointment)
-            .amount(depositAmount)
-            .status(DepositStatus.PENDING)
-            .build();
+    // reuse existing deposit if slot was previously cancelled, otherwise create new
+    Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
+            .map(existing -> {
+                existing.setAmount(depositAmount);
+                existing.setStatus(DepositStatus.PENDING);
+                existing.setPaidAt(null);
+                return existing;
+            })
+            .orElseGet(() -> Deposit.builder()
+                    .appointment(appointment)
+                    .amount(depositAmount)
+                    .status(DepositStatus.PENDING)
+                    .build());
 
     appointmentRepository.save(appointment);
     depositRepository.save(deposit);
