@@ -48,6 +48,7 @@ public class AppointmentService {
   // -------- QUERY SERVICES ------------
 
   // returns all appointments for a business, paginated and filterable by status
+  @Transactional(readOnly = true)
   public Page<AppointmentResponse> getAppointmentsByBusiness(
       UUID businessId,
       AppointmentStatus status,
@@ -64,6 +65,7 @@ public class AppointmentService {
   }
 
   // returns today's appointments for the owner dashboard
+  @Transactional(readOnly = true)
   public List<AppointmentResponse> getTodayAppointments(UUID businessId) {
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new NotFoundException("Business not found"));
@@ -78,6 +80,7 @@ public class AppointmentService {
   }
 
   // returns future UNBOOKED slots for the public endpoint with optional filters
+  @Transactional(readOnly = true)
   public List<AppointmentResponse> getAvailableSlots(
       UUID businessId,
       Long serviceId,
@@ -94,6 +97,7 @@ public class AppointmentService {
   }
 
   // returns all appointments for authed client
+  @Transactional(readOnly = true)
   public List<AppointmentResponse> getMyAppointments(Long clientUserId) {
     return appointmentRepository
         .findByClientUserIdOrderByStartDatetimeDesc(clientUserId)
@@ -142,6 +146,7 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
         appointment.setClientName(clientUser.getName());
         appointment.setClientEmail(clientUser.getEmail());
+        appointment.setClientPhone(request.getClientPhone());
     } else {
         if (request.getClientName() == null || request.getClientEmail() == null) {
             throw new IllegalArgumentException("Ingresa tu nombre y email para reservar el turno.");
