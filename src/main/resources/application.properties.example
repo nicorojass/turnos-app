@@ -13,3 +13,6 @@ jwt.expiration=
 app.admin.email=
 app.admin.password=
 app.admin.name=
+
+# frontend origins allowed to call the api (comma separated). defaults to http://localhost:4200
+app.cors.allowed-origins=http://localhost:4200
