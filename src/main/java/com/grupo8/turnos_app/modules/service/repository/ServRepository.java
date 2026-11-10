@@ -11,7 +11,7 @@ import com.grupo8.turnos_app.modules.service.entity.Serv;
 
 public interface ServRepository extends JpaRepository<Serv, Long> {
     
-    List<Serv> findByBusinessId(Long businessId);
+    List<Serv> findByBusinessIdAndDeletedFalse(Long businessId);
     boolean existsByBusinessIdAndNameAndDurationMinutesAndPriceAndDepositPorcentage(
     Long businessId, String name, Integer durationMinutes, BigDecimal price, BigDecimal depositPorcentage);
     
