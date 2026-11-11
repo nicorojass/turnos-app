@@ -74,37 +74,39 @@ public class AgendaGeneratorService {
     businessRepository.save(business);
   }
 
-  // called when an appointmentSchedule is created or manually triggered ("generate now" in the panel).
-  // generates from today up to the current scheduleEnd horizon so a newly added
-  // AppointmentSchedule fills the entire existing agenda window.
-  // also moves scheduleEnd forward when this run goes further than it, so the panel shows the real
-  // end of the agenda and the cron continues from there instead of generating the same days again.
+  // rebuilds the agenda from scratch, the same way sacaturno does when the owner saves changes:
+  // deletes the future free slots and generates daysToCreate days again starting today, with the
+  // weekly template as it is right now. that way the free slots on the public page always match the
+  // template, for example if a template entry moves from 10:00 to 10:30 the 10:00 slots disappear.
+  // called when the automatic agenda is turned on, when daysToCreate changes, when a template entry
+  // is created, edited or deleted, and from "generate now" in the panel.
+  // does nothing while the automatic agenda is off: the template is a draft until it gets turned on.
+  // scheduleEnd ends up on the last generated day, so the cron renews from there.
   @Transactional
-  public void generateFromToday(UUID businessId) {
+  public void regenerate(UUID businessId) {
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
-    generateFromToday(business);
+    regenerate(business);
   }
 
   @Transactional
-  public void generateFromToday(Business business) {
+  public void regenerate(Business business) {
+    if (!Boolean.TRUE.equals(business.getAutomaticSchedule()))
+      return;
+
     Integer daysToCreate = business.getScheduleDaysToCreate();
     if (daysToCreate == null || daysToCreate <= 0)
       return;
 
+    appointmentRepository.deleteFutureFreeSlots(business.getId(), LocalDateTime.now());
+
+    // same inclusive range as runAutomation: 30 days counting today
     LocalDate today = LocalDate.now();
     LocalDate toDate = today.plusDays(daysToCreate - 1);
-    // if the cron already loaded the agenda further ahead, fill up to there
-    LocalDate currentEnd = business.getScheduleEnd() != null ? business.getScheduleEnd().toLocalDate() : null;
-    if (currentEnd != null && currentEnd.isAfter(toDate))
-      toDate = currentEnd;
-
     generateDaySlots(business, today, toDate);
 
-    if (currentEnd == null || toDate.isAfter(currentEnd)) {
-      business.setScheduleEnd(toDate.atStartOfDay());
-      businessRepository.save(business);
-    }
+    business.setScheduleEnd(toDate.atStartOfDay());
+    businessRepository.save(business);
   }
 
   // generates the UNBOOKED appointments for every date between fromDate and toDate, both included.

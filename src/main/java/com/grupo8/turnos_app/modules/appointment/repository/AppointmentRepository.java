@@ -11,6 +11,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -67,6 +68,17 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Param("startDatetime") LocalDateTime startDatetime);
 
   Optional<Appointment> findByPublicId(UUID publicId);
+
+  // used by the agenda regeneration: removes the future free slots of a business so they can be
+  // created again from the current weekly template.
+  // only UNBOOKED and without a deposit row: a reservation that expired goes back to UNBOOKED but keeps
+  // its CANCELED deposit pointing to it, and deleting that appointment would break the foreign key.
+  // booked or awaiting payment appointments are never touched.
+  @Modifying
+  @Query("DELETE FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status = 'UNBOOKED' AND a.startDatetime > :now " +
+    "AND NOT EXISTS (SELECT d FROM Deposit d WHERE d.appointment = a)")
+  int deleteFutureFreeSlots(@Param("businessId") Long businessId, @Param("now") LocalDateTime now);
 
   @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
     "AND ((a.status = 'BOOKED' AND a.endDatetime > :now) OR a.status = 'AWAITING_PAYMENT')")

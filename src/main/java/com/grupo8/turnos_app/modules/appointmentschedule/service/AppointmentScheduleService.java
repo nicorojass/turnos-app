@@ -74,18 +74,10 @@ public class AppointmentScheduleService {
 
         AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
 
-        generateIfAutomatic(business);
+        // with the automatic agenda off this does nothing and the entry only stays in the template
+        agendaGeneratorService.regenerate(business);
 
         return AppointmentScheduleMapper.toResponse(saved);
-    }
-
-    // the weekly template is a draft until the owner turns on the automatic agenda: while it's off,
-    // adding or editing an entry only saves it and no free appointments show up on the public page.
-    // when it gets turned on, BusinessService.updateBusiness runs the generation for the whole template.
-    private void generateIfAutomatic(Business business) {
-        if (Boolean.TRUE.equals(business.getAutomaticSchedule())) {
-            agendaGeneratorService.generateFromToday(business);
-        }
     }
 
     // each entry is one appointment, so it has to fit the service at least once.
@@ -101,7 +93,11 @@ public class AppointmentScheduleService {
     public void delete(UUID publicId) {
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
+        Business business = schedule.getBusiness();
         appointmentScheduleRepository.delete(schedule);
+
+        // the free slots this entry already generated go away too
+        agendaGeneratorService.regenerate(business);
     }
 
     public AppointmentScheduleResponse update(UUID businessId, UUID publicId, AppointmentScheduleRequest request) {
@@ -138,9 +134,9 @@ public class AppointmentScheduleService {
 
         AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
 
-        // the appointments generated with the old times stay as they are (the panel warns about it),
-        // this only creates the ones for the new times
-        generateIfAutomatic(business);
+        // the free slots with the old times are deleted and created again with the new ones.
+        // the ones somebody already booked keep the old time, those are never touched
+        agendaGeneratorService.regenerate(business);
 
         return AppointmentScheduleMapper.toResponse(saved);
     }

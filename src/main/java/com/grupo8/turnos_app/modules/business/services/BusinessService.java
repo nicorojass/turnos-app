@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.business.services;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
@@ -90,10 +91,14 @@ public class BusinessService {
         Business business = businessRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
-        // if activating automatic schedule, reset schedule end to trigger regeneration
-        // from today
+        // the agenda gets rebuilt from today (like sacaturno) when the automatic agenda is turned on,
+        // or when it was already on and the owner changed how many days to create, for example from
+        // 7 to 30 days. changing only the anticipation doesn't need it: that just moves when the cron
+        // renews. turning it off keeps the free slots already published, sacaturno does the same.
         boolean activatingSchedule = !Boolean.TRUE.equals(business.getAutomaticSchedule())
                 && Boolean.TRUE.equals(request.getAutomaticSchedule());
+        boolean daysToCreateChanged = Boolean.TRUE.equals(request.getAutomaticSchedule())
+                && !Objects.equals(business.getScheduleDaysToCreate(), request.getScheduleDaysToCreate());
 
         business.setName(request.getName());
         business.setEmail(request.getEmail());
@@ -101,7 +106,8 @@ public class BusinessService {
         business.setPhone(request.getPhone());
         business.setDescription(request.getDescription());
         business.setAutomaticSchedule(request.getAutomaticSchedule());
-        business.setScheduleEnd(activatingSchedule ? null : request.getScheduleEnd());
+        // when it regenerates, regenerate sets scheduleEnd itself
+        business.setScheduleEnd(request.getScheduleEnd());
         business.setScheduleDaysToCreate(request.getScheduleDaysToCreate());
         business.setScheduleAnticipation(request.getScheduleAnticipation());
 
@@ -112,8 +118,8 @@ public class BusinessService {
 
         Business saved = businessRepository.save(business);
 
-        if (activatingSchedule) {
-            agendaGeneratorService.runAutomation(saved);
+        if (activatingSchedule || daysToCreateChanged) {
+            agendaGeneratorService.regenerate(saved);
         }
 
         return BusinessMapper.toResponse(saved);
