@@ -50,10 +50,7 @@ public class AppointmentScheduleService {
         Serv service = servRepository.findByPublicId(request.getServiceId())
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
-        long scheduleMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
-        if (scheduleMinutes < service.getDurationMinutes()) {
-            throw new InvalidScheduleRangeException("El rango de tiempo debe ser al menos tan largo como la duración del servicio");
-        }
+        validateRange(request, service);
 
         User employee = null;
         if (request.getEmployeeId() != null) {
@@ -77,9 +74,28 @@ public class AppointmentScheduleService {
 
         AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
 
-        agendaGeneratorService.generateFromToday(business);
+        generateIfAutomatic(business);
 
         return AppointmentScheduleMapper.toResponse(saved);
+    }
+
+    // the weekly template is a draft until the owner turns on the automatic agenda: while it's off,
+    // adding or editing an entry only saves it and no free appointments show up on the public page.
+    // when it gets turned on, BusinessService.updateBusiness runs the generation for the whole template.
+    private void generateIfAutomatic(Business business) {
+        if (Boolean.TRUE.equals(business.getAutomaticSchedule())) {
+            agendaGeneratorService.generateFromToday(business);
+        }
+    }
+
+    // each entry is one appointment, so it has to fit the service at least once.
+    // for example a 45 min haircut doesn't fit between 12:00 and 12:30, but it does between 12:00 and 12:45.
+    // used by create and update, before only create checked it.
+    private void validateRange(AppointmentScheduleRequest request, Serv service) {
+        long scheduleMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
+        if (scheduleMinutes < service.getDurationMinutes()) {
+            throw new InvalidScheduleRangeException("El rango de tiempo debe ser al menos tan largo como la duración del servicio");
+        }
     }
 
     public void delete(UUID publicId) {
@@ -96,6 +112,8 @@ public class AppointmentScheduleService {
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
+
+        validateRange(request, service);
 
         User employee = null;
         if (request.getEmployeeId() != null) {
@@ -118,6 +136,12 @@ public class AppointmentScheduleService {
         schedule.setService(service);
         schedule.setEmployee(employee);
 
-        return AppointmentScheduleMapper.toResponse(appointmentScheduleRepository.save(schedule));
+        AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
+
+        // the appointments generated with the old times stay as they are (the panel warns about it),
+        // this only creates the ones for the new times
+        generateIfAutomatic(business);
+
+        return AppointmentScheduleMapper.toResponse(saved);
     }
 }

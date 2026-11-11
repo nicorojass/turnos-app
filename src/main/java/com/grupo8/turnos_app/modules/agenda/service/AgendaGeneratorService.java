@@ -50,30 +50,35 @@ public class AgendaGeneratorService {
     LocalDate today = LocalDate.now();
     LocalDate fromDate;
 
-    // if scheduleEnd is set and is after today, use it as the fromDate. otherwise, use today 
+    // scheduleEnd is the last day already generated, so the next batch starts the day after.
+    // first run (scheduleEnd null) starts today, so the slots left for today get created too.
+    // if the window already expired (for example the server was off a few days) it also restarts
+    // from today, otherwise it would spend the whole batch on past dates that get skipped anyway.
     if (business.getScheduleEnd() != null) {
       LocalDate scheduleEndDate = business.getScheduleEnd().toLocalDate();
       long dayDifference = ChronoUnit.DAYS.between(today, scheduleEndDate);
       Integer anticipation = business.getScheduleAnticipation();
       if (anticipation != null && dayDifference > anticipation)
         return;
-      fromDate = scheduleEndDate;
+      fromDate = scheduleEndDate.isBefore(today) ? today : scheduleEndDate.plusDays(1);
     } else {
       fromDate = today;
     }
 
-    generateDaySlots(business, fromDate, daysToCreate);
+    // inclusive range: with daysToCreate 30 starting on november 11th it generates up to
+    // december 10th, that is, 30 days counting the first one
+    LocalDate toDate = fromDate.plusDays(daysToCreate - 1);
+    generateDaySlots(business, fromDate, toDate);
 
-    // update business' schedule end to the last generated day
-    LocalDate baseEnd = business.getScheduleEnd() != null ? business.getScheduleEnd().toLocalDate() : today;
-    business.setScheduleEnd(baseEnd.plusDays(daysToCreate).atStartOfDay());
+    business.setScheduleEnd(toDate.atStartOfDay());
     businessRepository.save(business);
   }
 
-  // called when an appointmentSchedule is created or manually triggered.
+  // called when an appointmentSchedule is created or manually triggered ("generate now" in the panel).
   // generates from today up to the current scheduleEnd horizon so a newly added
   // AppointmentSchedule fills the entire existing agenda window.
-  // does not update scheduleEnd.
+  // also moves scheduleEnd forward when this run goes further than it, so the panel shows the real
+  // end of the agenda and the cron continues from there instead of generating the same days again.
   @Transactional
   public void generateFromToday(UUID businessId) {
     Business business = businessRepository.findByPublicId(businessId)
@@ -88,16 +93,23 @@ public class AgendaGeneratorService {
       return;
 
     LocalDate today = LocalDate.now();
-    int effectiveDays = daysToCreate;
-    if (business.getScheduleEnd() != null) {
-      long daysUntilEnd = ChronoUnit.DAYS.between(today, business.getScheduleEnd().toLocalDate());
-      if (daysUntilEnd > 0) effectiveDays = (int) daysUntilEnd;
-    }
+    LocalDate toDate = today.plusDays(daysToCreate - 1);
+    // if the cron already loaded the agenda further ahead, fill up to there
+    LocalDate currentEnd = business.getScheduleEnd() != null ? business.getScheduleEnd().toLocalDate() : null;
+    if (currentEnd != null && currentEnd.isAfter(toDate))
+      toDate = currentEnd;
 
-    generateDaySlots(business, today, effectiveDays);
+    generateDaySlots(business, today, toDate);
+
+    if (currentEnd == null || toDate.isAfter(currentEnd)) {
+      business.setScheduleEnd(toDate.atStartOfDay());
+      businessRepository.save(business);
+    }
   }
 
-  private void generateDaySlots(Business business, LocalDate fromDate, int daysToCreate) {
+  // generates the UNBOOKED appointments for every date between fromDate and toDate, both included.
+  // it's idempotent: existsSlot skips the ones already created, so running it twice doesn't duplicate.
+  private void generateDaySlots(Business business, LocalDate fromDate, LocalDate toDate) {
 
     Map<DayOfWeek, DaySchedule> dayScheduleMap = dayScheduleRepository
         .findAllByBusinessId(business.getId()).stream()
@@ -109,8 +121,8 @@ public class AgendaGeneratorService {
 
     // iterate over the days to create and generate appointments based on the
     // daySchedule's appointmentSchedules
-    for (int day = 1; day <= daysToCreate; day++) {
-      LocalDate date = fromDate.plusDays(day);
+    // starts on fromDate itself; before it started on the day after, so today never got slots
+    for (LocalDate date = fromDate; !date.isAfter(toDate); date = date.plusDays(1)) {
       // ordinal(): MONDAY=0 to SUNDAY=6, matching DayOfWeek enum (LUN=0 to DOM=6) and
       // dayNumber convention
       int dayNumber = date.getDayOfWeek().ordinal();
