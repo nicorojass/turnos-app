@@ -1,13 +1,16 @@
 package com.grupo8.turnos_app.modules.day_schedule.service;
 
 import java.time.LocalTime;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.enums.DayOfWeek;
+import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
@@ -29,6 +32,7 @@ public class DayScheduleService {
 
   private final DayScheduleRepository dayScheduleRepository;
   private final BusinessRepository businessRepository;
+  private final AgendaGeneratorService agendaGeneratorService;
 
   // Called by businessService when creating a new business
   // Creates each week's day_schedule with null values to be set later
@@ -60,23 +64,36 @@ public class DayScheduleService {
 
   // Replaces the full weekly schedule. Each item in the list is updated by day.
   // If a day is missing from the list it stays untouched in the DB.
+  // If some day was opened or closed, the agenda gets regenerated so the free slots follow it:
+  // closing monday removes the future free slots of every monday, and opening it creates them
+  // again from the template. Booked slots are never touched. Changing only the hours or the
+  // interval does not regenerate, because the slots come from the template entries and not from
+  // the day hours. regenerate does nothing while the automatic agenda is off.
   @Transactional
   public List<DayScheduleResponse> updateFullSchedule(UUID businessId,
       List<DayScheduleUpdateRequest> requests) {
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
-    return requests.stream()
-        .map(req -> updateDay(business.getId(), req))
-        .toList();
+    List<DayScheduleResponse> responses = new ArrayList<>();
+    boolean openingChanged = false;
+    for (DayScheduleUpdateRequest request : requests) {
+      DaySchedule daySchedule = dayScheduleRepository
+          .findByBusinessIdAndDay(business.getId(), request.getDay())
+          .orElseThrow(() -> new DayScheduleNotFoundException("Dia no encontrado"));
+      // compared here because updateDay overwrites enabled
+      if (!Objects.equals(daySchedule.getEnabled(), request.getEnabled()))
+        openingChanged = true;
+      responses.add(updateDay(daySchedule, request));
+    }
+
+    if (openingChanged)
+      agendaGeneratorService.regenerate(business);
+    return responses;
   }
 
   // Update day_schedule settings
-  private DayScheduleResponse updateDay(Long businessId, DayScheduleUpdateRequest request) {
-    DaySchedule daySchedule = dayScheduleRepository
-        .findByBusinessIdAndDay(businessId, request.getDay())
-        .orElseThrow(() -> new DayScheduleNotFoundException(
-            "Dia no encontrado"));
+  private DayScheduleResponse updateDay(DaySchedule daySchedule, DayScheduleUpdateRequest request) {
 
     // new values.
     LocalTime effectiveStart = request.getDayStart() != null
