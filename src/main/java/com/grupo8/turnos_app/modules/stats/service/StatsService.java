@@ -219,12 +219,12 @@ public class StatsService {
         LocalDateTime to = range[1];
         LocalDateTime now = LocalDateTime.now();
 
-        // 6 months back for growth chart
-        LocalDateTime growthSince = LocalDateTime.now().minusMonths(6).withDayOfMonth(1).toLocalDate().atStartOfDay();
+        // last 6 months for growth chart, including the current one
+        LocalDateTime growthSince = LocalDateTime.now().minusMonths(5).withDayOfMonth(1).toLocalDate().atStartOfDay();
 
-        long totalBusinesses = businessRepository.count();
+        long totalBusinesses = businessRepository.countByDeletedFalse();
         long activeBusinesses = appointmentRepository.countActiveBusinessesInRange(from, to);
-        long totalUsers = userRepository.count();
+        long totalUsers = userRepository.countByActiveTrue();
         long newUsers = userRepository.countNewUsersInRange(from, to);
 
         long totalAppts = appointmentRepository.countAllInRange(from, to);
@@ -245,9 +245,10 @@ public class StatsService {
                 .topBusinessesByAppointments(from, to, now, PageRequest.of(0, 10))
                 .stream()
                 .map(r -> BusinessSummaryDto.builder()
-                        .businessName((String) r[0])
-                        .appointmentCount(((Number) r[1]).longValue())
-                        .revenue((BigDecimal) r[2])
+                        .businessId((UUID) r[0])
+                        .businessName((String) r[1])
+                        .appointmentCount(((Number) r[2]).longValue())
+                        .revenue((BigDecimal) r[3])
                         .build())
                 .toList();
 

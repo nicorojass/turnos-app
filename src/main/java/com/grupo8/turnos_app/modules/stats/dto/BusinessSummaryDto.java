@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.stats.dto;
 
 import java.math.BigDecimal;
+import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,6 +16,7 @@ import lombok.Setter;
 @Builder
 // DTO for business-level summary in business stats response, used to represent overall business performance in the given period
 public class BusinessSummaryDto {
+    private UUID businessId;
     private String businessName;
     private long appointmentCount;
     private BigDecimal revenue;
