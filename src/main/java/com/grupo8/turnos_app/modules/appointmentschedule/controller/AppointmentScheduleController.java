@@ -44,7 +44,7 @@ public class AppointmentScheduleController {
 
     @PostMapping("/generate")
     public ResponseEntity<Void> generateSlots(@PathVariable UUID businessId) {
-        agendaGeneratorService.generateFromToday(businessId);
+        agendaGeneratorService.regenerate(businessId);
         return ResponseEntity.ok().build();
     }
 

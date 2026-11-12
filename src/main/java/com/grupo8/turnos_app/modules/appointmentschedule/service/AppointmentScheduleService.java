@@ -50,10 +50,7 @@ public class AppointmentScheduleService {
         Serv service = servRepository.findByPublicId(request.getServiceId())
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
-        long scheduleMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
-        if (scheduleMinutes < service.getDurationMinutes()) {
-            throw new InvalidScheduleRangeException("El rango de tiempo debe ser al menos tan largo como la duración del servicio");
-        }
+        validateRange(request, service);
 
         User employee = null;
         if (request.getEmployeeId() != null) {
@@ -77,15 +74,30 @@ public class AppointmentScheduleService {
 
         AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
 
-        agendaGeneratorService.generateFromToday(business);
+        // with the automatic agenda off this does nothing and the entry only stays in the template
+        agendaGeneratorService.regenerate(business);
 
         return AppointmentScheduleMapper.toResponse(saved);
+    }
+
+    // each entry is one appointment, so it has to fit the service at least once.
+    // for example a 45 min haircut doesn't fit between 12:00 and 12:30, but it does between 12:00 and 12:45.
+    // used by create and update, before only create checked it.
+    private void validateRange(AppointmentScheduleRequest request, Serv service) {
+        long scheduleMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
+        if (scheduleMinutes < service.getDurationMinutes()) {
+            throw new InvalidScheduleRangeException("El rango de tiempo debe ser al menos tan largo como la duración del servicio");
+        }
     }
 
     public void delete(UUID publicId) {
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
+        Business business = schedule.getBusiness();
         appointmentScheduleRepository.delete(schedule);
+
+        // the free slots this entry already generated go away too
+        agendaGeneratorService.regenerate(business);
     }
 
     public AppointmentScheduleResponse update(UUID businessId, UUID publicId, AppointmentScheduleRequest request) {
@@ -96,6 +108,8 @@ public class AppointmentScheduleService {
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
+
+        validateRange(request, service);
 
         User employee = null;
         if (request.getEmployeeId() != null) {
@@ -118,6 +132,12 @@ public class AppointmentScheduleService {
         schedule.setService(service);
         schedule.setEmployee(employee);
 
-        return AppointmentScheduleMapper.toResponse(appointmentScheduleRepository.save(schedule));
+        AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
+
+        // the free slots with the old times are deleted and created again with the new ones.
+        // the ones somebody already booked keep the old time, those are never touched
+        agendaGeneratorService.regenerate(business);
+
+        return AppointmentScheduleMapper.toResponse(saved);
     }
 }
