@@ -310,11 +310,11 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Param("to") LocalDateTime to,
     @Param("now") LocalDateTime now);
 
-  // [businessName, count, sumPrice] top businesses
-  @Query("SELECT a.business.name, COUNT(a), COALESCE(SUM(a.price), 0) " +
+  // [businessPublicId, businessName, count, sumPrice] top businesses
+  @Query("SELECT a.business.publicId, a.business.name, COUNT(a), COALESCE(SUM(a.price), 0) " +
     "FROM Appointment a WHERE a.status = 'BOOKED' AND a.endDatetime < :now " +
     "AND a.startDatetime >= :from AND a.startDatetime < :to " +
-    "GROUP BY a.business.name ORDER BY COUNT(a) DESC")
+    "GROUP BY a.business.publicId, a.business.name ORDER BY COUNT(a) DESC")
   List<Object[]> topBusinessesByAppointments(
     @Param("from") LocalDateTime from,
     @Param("to") LocalDateTime to,

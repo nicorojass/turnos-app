@@ -18,6 +18,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByPublicId(UUID publicId);
     boolean existsByEmailAndActiveTrue(String email);
 
+    long countByActiveTrue();
+
     // count new users registered in  date range
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :from AND u.createdAt < :to")
     long countNewUsersInRange(
