@@ -22,6 +22,9 @@ import jakarta.persistence.LockModeType;
 
 public interface AppointmentRepository extends JpaRepository<Appointment, Long> {
 
+  @Query("SELECT a.id FROM Appointment a WHERE a.publicId = :publicId")
+  Optional<Long> findIdByPublicId(@Param("publicId") UUID publicId);
+
   // pessimistic lock to prevent double booking on concurrent reqs
   @Lock(LockModeType.PESSIMISTIC_WRITE)
   @Query("SELECT a FROM Appointment a WHERE a.id = :id")

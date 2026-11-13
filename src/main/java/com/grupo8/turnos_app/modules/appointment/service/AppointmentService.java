@@ -222,12 +222,14 @@ public class AppointmentService {
   @Transactional
 public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest request, Authentication authentication) {
 
-    // step 1: resolver UUID al Long interno (sin lock)
-    Appointment ref = appointmentRepository.findByPublicId(publicId)
+    // step 1: resolve the UUID to the internal id only. loading the whole entity here made step 2 return
+    // that same cached instance, so a request that waited for the lock still saw the slot as free and
+    // only the unique constraint of the deposit stopped it
+    Long appointmentId = appointmentRepository.findIdByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Error al reservar: turno no encontrado."));
 
-    // step 2: re-fetch con lock pesimista usando el PK interno
-    Appointment appointment = appointmentRepository.findByIdWithLock(ref.getId())
+    // step 2: fetch with a pessimistic lock, so concurrent requests read it one after the other
+    Appointment appointment = appointmentRepository.findByIdWithLock(appointmentId)
         .orElseThrow(() -> new NotFoundException("Error al reservar: turno no encontrado."));
 
     // check if slot is still available
