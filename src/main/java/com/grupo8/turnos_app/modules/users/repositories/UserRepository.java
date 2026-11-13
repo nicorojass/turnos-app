@@ -1,5 +1,6 @@
 package com.grupo8.turnos_app.modules.users.repositories;
 
+import com.grupo8.turnos_app.common.enums.RoleName;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -19,6 +20,7 @@ public interface UserRepository extends JpaRepository<User, Long> {
     boolean existsByEmailAndActiveTrue(String email);
 
     long countByActiveTrue();
+    long countByActiveTrueAndRoles_Name(RoleName name);
 
     // count new users registered in  date range
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt >= :from AND u.createdAt < :to")
