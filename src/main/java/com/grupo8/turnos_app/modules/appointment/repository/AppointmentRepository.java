@@ -105,6 +105,38 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Param("endDatetime") LocalDateTime endDatetime,
     @Param("manualOnly") boolean manualOnly);
 
+  // what the generator can't land on: appointments already taken by a client (booked or waiting for
+  // the payment) and the ones the owner created by hand. free template slots don't count, the
+  // regeneration replaces them
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND ((:employeeId IS NULL AND a.employee IS NULL) OR a.employee.id = :employeeId) " +
+    "AND a.startDatetime < :endDatetime AND a.endDatetime > :startDatetime " +
+    "AND (a.status IN ('BOOKED', 'AWAITING_PAYMENT') " +
+    "  OR (a.manual = true AND a.status NOT IN ('CANCELLED', 'SUSPENDED')))")
+  boolean existsTakenOverlap(
+    @Param("businessId") Long businessId,
+    @Param("employeeId") Long employeeId,
+    @Param("startDatetime") LocalDateTime startDatetime,
+    @Param("endDatetime") LocalDateTime endDatetime);
+
+  // same rule as existsOverlappingInBusiness (manualOnly false), leaving one appointment out
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.id <> :excludeId " +
+    "AND a.status NOT IN ('CANCELLED', 'SUSPENDED') " +
+    "AND ((:employeeId IS NULL AND a.employee IS NULL) OR a.employee.id = :employeeId) " +
+    "AND a.startDatetime < :endDatetime AND a.endDatetime > :startDatetime")
+  boolean existsOverlappingExcluding(
+    @Param("businessId") Long businessId,
+    @Param("employeeId") Long employeeId,
+    @Param("startDatetime") LocalDateTime startDatetime,
+    @Param("endDatetime") LocalDateTime endDatetime,
+    @Param("excludeId") Long excludeId);
+
+  // free appointments the owner created by hand for a service, still to come
+  @Query("SELECT a FROM Appointment a WHERE a.service.id = :serviceId AND a.manual = true " +
+    "AND a.status = 'UNBOOKED' AND a.startDatetime > :now")
+  List<Appointment> findFutureFreeManualByService(@Param("serviceId") Long serviceId, @Param("now") LocalDateTime now);
+
   // same as deleteFutureFreeSlots, only for one service (used when the service is deleted)
   @Modifying
   @Query("DELETE FROM Appointment a WHERE a.service.id = :serviceId " +

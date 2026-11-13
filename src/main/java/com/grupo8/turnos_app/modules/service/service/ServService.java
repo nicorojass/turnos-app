@@ -1,5 +1,6 @@
 package com.grupo8.turnos_app.modules.service.service;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
@@ -9,7 +10,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
+import com.grupo8.turnos_app.modules.appointment.entity.Appointment;
+import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentConflictException;
 import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
+import com.grupo8.turnos_app.modules.appointmentschedule.exception.InvalidScheduleRangeException;
 import com.grupo8.turnos_app.modules.appointmentschedule.repository.AppointmentScheduleRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
@@ -72,6 +76,9 @@ public class ServService {
         throw new ServiceAlreadyExistsException("An identical service already exists for this business");
     }
 
+    if (!request.getDurationMinutes().equals(service.getDurationMinutes()))
+        applyNewDuration(service, request.getDurationMinutes());
+
     service.setName(request.getName());
     service.setPrice(request.getPrice());
     service.setDurationMinutes(request.getDurationMinutes());
@@ -86,6 +93,28 @@ public class ServService {
     return ServMapper.toResponse(saved);
 }
 
+
+    // template slots take their times from the template, so a longer service only has to still fit in
+    // every template. manual free appointments (created from the agenda) take the end from the
+    // duration, so their end moves, as long as it doesn't land on another appointment of the same person
+    private void applyNewDuration(Serv service, int newDuration) {
+        boolean templateTooShort = appointmentScheduleRepository.findByServiceId(service.getId()).stream()
+                .anyMatch(schedule -> Duration.between(schedule.getStartTime(), schedule.getEndTime()).toMinutes() < newDuration);
+        if (templateTooShort)
+            throw new InvalidScheduleRangeException(
+                    "Hay plantillas de este servicio más cortas que la nueva duración. Ajustalas antes de cambiarla");
+
+        for (Appointment appointment : appointmentRepository.findFutureFreeManualByService(service.getId(), LocalDateTime.now())) {
+            LocalDateTime newEnd = appointment.getStartDatetime().plusMinutes(newDuration);
+            Long employeeId = appointment.getEmployee() != null ? appointment.getEmployee().getId() : null;
+            if (appointmentRepository.existsOverlappingExcluding(service.getBusiness().getId(), employeeId,
+                    appointment.getStartDatetime(), newEnd, appointment.getId()))
+                throw new AppointmentConflictException("Con la nueva duración, el turno suelto del "
+                        + appointment.getStartDatetime().toLocalDate() + " a las " + appointment.getStartDatetime().toLocalTime()
+                        + " se superpondría con otro turno. Movelo o borralo antes de cambiarla");
+            appointment.setEndDatetime(newEnd);
+        }
+    }
 
     @Transactional
     public void deleteService(UUID publicId) {

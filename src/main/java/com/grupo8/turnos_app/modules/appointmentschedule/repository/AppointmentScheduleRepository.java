@@ -16,6 +16,7 @@ import com.grupo8.turnos_app.modules.appointmentschedule.entity.AppointmentSched
 
 public interface AppointmentScheduleRepository extends JpaRepository<AppointmentSchedule, Long> {
     List<AppointmentSchedule> findByBusinessId(Long businessId);
+    List<AppointmentSchedule> findByServiceId(Long serviceId);
   @Query("""
     SELECT COUNT(a) > 0 FROM AppointmentSchedule a
     WHERE a.business.id = :businessId

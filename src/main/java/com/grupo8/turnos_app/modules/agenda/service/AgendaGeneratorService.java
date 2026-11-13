@@ -153,15 +153,16 @@ public class AgendaGeneratorService {
     LocalDateTime endDatetime = LocalDateTime.of(date, appointment.getEndTime());
     Long employeeId = appointment.getEmployee() != null ? appointment.getEmployee().getId() : null;
 
-    // besides the slot already existing, it also skips the ones that would land on top of an
+    // besides the slot already existing, it also skips the ones that would land on top of an appointment
+    // a client already took (booked or waiting for the payment), so moving a template doesn't give the
+    // same employee two booked appointments at once. and the ones that would land on top of an
     // appointment the owner created by hand for the same employee. for example if the owner added
     // a manual 10:00 to 10:45 for lucia on monday 16, the template's 10:30 for lucia isn't created
     // that monday, otherwise lucia would have two overlapping appointments
     if (startDatetime.isAfter(LocalDateTime.now())
         && !appointmentRepository.existsSlot(business.getId(), appointment.getService().getId(), employeeId,
             startDatetime)
-        && !appointmentRepository.existsOverlappingInBusiness(business.getId(), employeeId, startDatetime,
-            endDatetime, true)) {
+        && !appointmentRepository.existsTakenOverlap(business.getId(), employeeId, startDatetime, endDatetime)) {
 
       appointmentRepository.save(Appointment.builder()
           .startDatetime(startDatetime)
