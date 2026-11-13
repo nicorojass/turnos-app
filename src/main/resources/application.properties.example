@@ -24,7 +24,7 @@ app.cors.allowed-origins=http://localhost:4200
 app.booking.guest-max-per-ip=3
 app.booking.guest-window-minutes=30
 
-# failed logins allowed inside the window, per email and per ip. defaults: 5 and 20 per 15 minutes
+# failed logins allowed inside the window, per email from one ip and per ip. defaults: 5 and 20 per 15 minutes
 app.login.max-failures-per-email=5
 app.login.max-failures-per-ip=20
 app.login.window-minutes=15

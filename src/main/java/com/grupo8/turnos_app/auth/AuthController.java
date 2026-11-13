@@ -44,7 +44,7 @@ public class AuthController {
         loginAttemptLimiter.checkAllowed(request.getEmail(), ip);
         try {
             AuthResponse response = authService.login(request);
-            loginAttemptLimiter.recordSuccess(request.getEmail());
+            loginAttemptLimiter.recordSuccess(request.getEmail(), ip);
             return ResponseEntity.ok(response);
         } catch (BadCredentialsException e) {
             // only a wrong email or password counts; a deactivated account is not a guess
