@@ -1,12 +1,14 @@
 package com.grupo8.turnos_app.modules.appointment.controller;
 
 import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -137,6 +139,21 @@ public class AppointmentController {
     @PostMapping("/appointments/{id}/pay-deposit")
     public ResponseEntity<AppointmentResponse> confirmDepositPayment(@PathVariable UUID id) {
         return ResponseEntity.ok(appointmentService.confirmDepositPayment(id));
+    }
+
+    // GET /employees/me/appointments - EMPLOYEE
+    // the appointments assigned to the logged employee, from any status. dateFrom and dateTo are
+    // optional and both inclusive, so dateFrom=2026-11-13&dateTo=2026-11-13 is just that day.
+    // pageable like the owner list, oldest first unless the front sends another sort
+    @GetMapping("/employees/me/appointments")
+    public ResponseEntity<Page<AppointmentResponse>> getEmployeeAppointments(
+            @RequestParam(required = false) AppointmentStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @PageableDefault(size = 20, sort = "startDatetime") Pageable pageable,
+            @AuthenticationPrincipal User authenticatedUser) {
+        return ResponseEntity.ok(appointmentService.getEmployeeAppointments(
+                authenticatedUser, status, dateFrom, dateTo, pageable));
     }
 
     // GET /users/me/appointments - CLIENT

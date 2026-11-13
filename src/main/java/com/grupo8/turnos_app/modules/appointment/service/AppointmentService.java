@@ -135,6 +135,34 @@ public class AppointmentService {
         .collect(java.util.stream.Collectors.toList());
   }
 
+  // returns the appointments assigned to the logged employee, for the "mis turnos" screen of
+  // the panel. only the ones where appointment.employee is this user, so an employee never sees
+  // the agenda of a coworker. without dates it goes from 2000 to 2100, that's simpler than
+  // null checks on dates in the query. dateTo is inclusive, so it becomes the next day at 00:00
+  @Transactional(readOnly = true)
+  public Page<AppointmentResponse> getEmployeeAppointments(
+      User employee,
+      AppointmentStatus status,
+      LocalDate dateFrom,
+      LocalDate dateTo,
+      Pageable pageable) {
+
+    if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
+      throw new InvalidAppointmentException("La fecha desde no puede ser posterior a la fecha hasta");
+    }
+
+    LocalDateTime from = (dateFrom != null)
+        ? dateFrom.atStartOfDay()
+        : LocalDate.of(2000, 1, 1).atStartOfDay();
+    LocalDateTime to = (dateTo != null)
+        ? dateTo.plusDays(1).atStartOfDay()
+        : LocalDate.of(2100, 1, 1).atStartOfDay();
+
+    return appointmentRepository
+        .findByEmployeeInRange(employee.getId(), status, from, to, pageable)
+        .map(AppointmentMapper::toResponse);
+  }
+
   // -------- SERVICES (CREATE, BOOK, CANCEL, SUSPEND, DELETE) ------------
   // CREATE APPOINTMENT | POST /businesses/{id}/appointments
   // the owner creates one appointment on a specific day and time from the agenda in the panel,

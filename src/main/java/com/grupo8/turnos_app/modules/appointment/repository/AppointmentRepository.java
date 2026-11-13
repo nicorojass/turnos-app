@@ -36,6 +36,18 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
   // get all appointments businessId by without status filter
   Page<Appointment> findByBusinessId(Long businessId, Pageable pageable);
 
+  // appointments assigned to one employee that start inside [from, to). status is optional.
+  // the service always sends both dates, so there's no null check on them
+  @Query("SELECT a FROM Appointment a WHERE a.employee.id = :employeeId " +
+      "AND (:status IS NULL OR a.status = :status) " +
+      "AND a.startDatetime >= :from AND a.startDatetime < :to")
+  Page<Appointment> findByEmployeeInRange(
+      @Param("employeeId") Long employeeId,
+      @Param("status") AppointmentStatus status,
+      @Param("from") LocalDateTime from,
+      @Param("to") LocalDateTime to,
+      Pageable pageable);
+
   // get todays appointments by businessid. ordered by start time
   @Query("SELECT a FROM Appointment a WHERE a.business.id = :businessId " +
       "AND a.startDatetime >= :startOfDay AND a.startDatetime < :endOfDay " +
