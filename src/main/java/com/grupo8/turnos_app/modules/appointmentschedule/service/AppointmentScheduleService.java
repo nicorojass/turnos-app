@@ -6,6 +6,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.grupo8.turnos_app.common.enums.DayOfWeek;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
 import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
@@ -18,6 +19,8 @@ import com.grupo8.turnos_app.modules.appointmentschedule.mapper.AppointmentSched
 import com.grupo8.turnos_app.modules.appointmentschedule.repository.AppointmentScheduleRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
+import com.grupo8.turnos_app.modules.day_schedule.DaySchedules;
+import com.grupo8.turnos_app.modules.day_schedule.repository.DayScheduleRepository;
 import com.grupo8.turnos_app.modules.service.entity.Serv;
 import com.grupo8.turnos_app.modules.service.repository.ServRepository;
 import com.grupo8.turnos_app.modules.users.entities.User;
@@ -35,6 +38,7 @@ public class AppointmentScheduleService {
     private final ServRepository servRepository;
     private final UserRepository userRepository;
     private final AgendaGeneratorService agendaGeneratorService;
+    private final DayScheduleRepository dayScheduleRepository;
 
     public List<AppointmentScheduleResponse> getByBusiness(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
@@ -56,6 +60,7 @@ public class AppointmentScheduleService {
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
         validateRange(request, service);
+        validateOpeningHours(request, business);
 
         User employee = null;
         if (request.getEmployeeId() != null) {
@@ -89,6 +94,18 @@ public class AppointmentScheduleService {
     // a template can only use employees of its own business
     private boolean worksFor(User employee, Business business) {
         return business.getEmployees().stream().anyMatch(e -> e.getId().equals(employee.getId()));
+    }
+
+    // the template has to fall inside the opening hours set for its day (when they are set).
+    // a day without hours yet doesn't restrict anything, and a closed day keeps the template as a draft.
+    private void validateOpeningHours(AppointmentScheduleRequest request, Business business) {
+        DayOfWeek day = DayOfWeek.values()[request.getDayNumber()];
+        dayScheduleRepository.findByBusinessIdAndDay(business.getId(), day).ifPresent(daySchedule -> {
+            if (!DaySchedules.fitsOpeningHours(daySchedule, request.getStartTime(), request.getEndTime())) {
+                throw new InvalidScheduleRangeException("El horario tiene que estar dentro de la atención del día ("
+                        + daySchedule.getDayStart() + " a " + daySchedule.getDayEnd() + ")");
+            }
+        });
     }
 
     // each entry is one appointment, so it has to fit the service at least once.
@@ -125,6 +142,7 @@ public class AppointmentScheduleService {
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
         validateRange(request, service);
+        validateOpeningHours(request, business);
 
         User employee = null;
         if (request.getEmployeeId() != null) {

@@ -20,6 +20,7 @@ import com.grupo8.turnos_app.modules.appointmentschedule.repository.AppointmentS
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
+import com.grupo8.turnos_app.modules.day_schedule.DaySchedules;
 import com.grupo8.turnos_app.modules.day_schedule.entity.DaySchedule;
 import com.grupo8.turnos_app.modules.day_schedule.repository.DayScheduleRepository;
 
@@ -136,6 +137,10 @@ public class AgendaGeneratorService {
 
       List<AppointmentSchedule> appointmentsForDay = schedulesByDayNumber.getOrDefault(dayNumber, List.of());
       for (AppointmentSchedule appointment : appointmentsForDay) {
+        // templates created before the day hours changed can fall outside them now: those wait
+        // until the hours or the template change again
+        if (!DaySchedules.fitsOpeningHours(daySchedule, appointment.getStartTime(), appointment.getEndTime()))
+          continue;
         generateAppointment(business, appointment, date);
       }
     }

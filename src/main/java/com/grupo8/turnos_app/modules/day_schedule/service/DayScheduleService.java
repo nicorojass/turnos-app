@@ -85,8 +85,11 @@ public class DayScheduleService {
       DaySchedule daySchedule = dayScheduleRepository
           .findByBusinessIdAndDay(business.getId(), request.getDay())
           .orElseThrow(() -> new DayScheduleNotFoundException("Dia no encontrado"));
-      // compared here because updateDay overwrites enabled
-      if (!Objects.equals(daySchedule.getEnabled(), request.getEnabled()))
+      // compared here because updateDay overwrites enabled and the hours.
+      // new hours change which templates fit the day, so they regenerate the agenda too
+      boolean hoursChanged = (request.getDayStart() != null && !request.getDayStart().equals(daySchedule.getDayStart()))
+          || (request.getDayEnd() != null && !request.getDayEnd().equals(daySchedule.getDayEnd()));
+      if (!Objects.equals(daySchedule.getEnabled(), request.getEnabled()) || hoursChanged)
         openingChanged = true;
       responses.add(updateDay(daySchedule, request));
     }
