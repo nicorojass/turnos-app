@@ -1,12 +1,16 @@
 package com.grupo8.turnos_app.modules.service.service;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
+import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
+import com.grupo8.turnos_app.modules.appointmentschedule.repository.AppointmentScheduleRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
@@ -26,6 +30,8 @@ public class ServService {
     private final ServRepository serviceRepository;
     private final BusinessRepository businessRepository;
     private final BusinessAccessGuard businessAccessGuard;
+    private final AppointmentRepository appointmentRepository;
+    private final AppointmentScheduleRepository appointmentScheduleRepository;
 
     public ServResponse createService(UUID businessId, ServRequest request) {
 
@@ -53,6 +59,7 @@ public class ServService {
                 .toList();
     }
 
+    @Transactional
     public ServResponse editService(UUID publicId, ServRequest request) {
     Serv service = serviceRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Service not found"));
@@ -68,15 +75,27 @@ public class ServService {
     service.setPrice(request.getPrice());
     service.setDurationMinutes(request.getDurationMinutes());
     service.setDepositPorcentage(request.getDepositPorcentage());
+    Serv saved = serviceRepository.save(service);
 
-    return ServMapper.toResponse(serviceRepository.save(service));
+    // the price is copied to the templates and to every slot when they are created, so a new price
+    // has to reach them too. booked appointments keep the price they were booked with.
+    appointmentScheduleRepository.updatePriceByServiceId(saved.getId(), saved.getPrice());
+    appointmentRepository.updateFutureFreeSlotsPrice(saved.getId(), saved.getPrice(), LocalDateTime.now());
+
+    return ServMapper.toResponse(saved);
 }
 
 
+    @Transactional
     public void deleteService(UUID publicId) {
         Serv service = serviceRepository.findByPublicId(publicId).orElseThrow(() -> new NotFoundException("Service not found"));
         businessAccessGuard.checkCanManage(service.getBusiness());
         service.setDeleted(true);
         serviceRepository.save(service);
+
+        // the service stops being offered: its templates go away and so do its future free slots.
+        // booked appointments stay, the client still has to be attended.
+        appointmentScheduleRepository.deleteByServiceId(service.getId());
+        appointmentRepository.deleteFutureFreeSlotsByService(service.getId(), LocalDateTime.now());
     }
 }

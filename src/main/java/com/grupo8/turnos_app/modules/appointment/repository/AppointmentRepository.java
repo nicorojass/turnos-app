@@ -45,6 +45,7 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
   // get future slots for the public booking view, with optional filters
   @Query("SELECT a FROM Appointment a WHERE a.business.id = :businessId " +
       "AND a.status = 'UNBOOKED' AND a.startDatetime > :now " +
+      "AND (a.service.deleted IS NULL OR a.service.deleted = false) " +
       "AND (:serviceId IS NULL OR a.service.id = :serviceId) " +
       "AND (:employeeId IS NULL OR a.employee.id = :employeeId) " +
       "ORDER BY a.startDatetime ASC")
@@ -100,6 +101,20 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Param("startDatetime") LocalDateTime startDatetime,
     @Param("endDatetime") LocalDateTime endDatetime,
     @Param("manualOnly") boolean manualOnly);
+
+  // same as deleteFutureFreeSlots, only for one service (used when the service is deleted)
+  @Modifying
+  @Query("DELETE FROM Appointment a WHERE a.service.id = :serviceId " +
+    "AND a.status = 'UNBOOKED' AND a.startDatetime > :now " +
+    "AND NOT EXISTS (SELECT d FROM Deposit d WHERE d.appointment = a)")
+  int deleteFutureFreeSlotsByService(@Param("serviceId") Long serviceId, @Param("now") LocalDateTime now);
+
+  // new price for the free slots already published of a service
+  @Modifying
+  @Query("UPDATE Appointment a SET a.price = :price WHERE a.service.id = :serviceId " +
+    "AND a.status = 'UNBOOKED' AND a.startDatetime > :now")
+  int updateFutureFreeSlotsPrice(@Param("serviceId") Long serviceId, @Param("price") BigDecimal price,
+    @Param("now") LocalDateTime now);
 
   @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
     "AND ((a.status = 'BOOKED' AND a.endDatetime > :now) OR a.status = 'AWAITING_PAYMENT')")

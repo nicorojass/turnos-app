@@ -1,11 +1,13 @@
 package com.grupo8.turnos_app.modules.appointmentschedule.repository;
 
+import java.math.BigDecimal;
 import java.time.LocalTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -36,4 +38,12 @@ boolean existsConflictingSchedule(
 );
 
     Optional<AppointmentSchedule> findByPublicId(UUID publicId);
+
+    @Modifying
+    @Query("DELETE FROM AppointmentSchedule a WHERE a.service.id = :serviceId")
+    int deleteByServiceId(@Param("serviceId") Long serviceId);
+
+    @Modifying
+    @Query("UPDATE AppointmentSchedule a SET a.price = :price WHERE a.service.id = :serviceId")
+    int updatePriceByServiceId(@Param("serviceId") Long serviceId, @Param("price") BigDecimal price);
 }
