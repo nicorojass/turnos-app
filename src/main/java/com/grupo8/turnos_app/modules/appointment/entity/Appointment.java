@@ -77,6 +77,15 @@ public class Appointment {
   @Column(name = "reserved_at")
   private LocalDateTime reservedAt;
 
+  // true when the owner created it by hand from the agenda in the panel, false when the
+  // generator made it from the weekly template. the agenda regeneration only wipes the
+  // generated free slots, so a free slot the owner added for one specific day (say an extra
+  // saturday at 10:00) survives when the template changes.
+  // the column default is there so the rows that already exist end up as false when
+  // hibernate adds the column
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private Boolean manual;
+
   // asign default values to timestamp and appt status, instead of doing it in
   // service
   @PrePersist
@@ -85,6 +94,10 @@ public class Appointment {
     this.publicId = UUID.randomUUID();
     if (this.status == null) {
       this.status = AppointmentStatus.UNBOOKED;
+    }
+    // the generator builds appointments without touching this field, so null means generated
+    if (this.manual == null) {
+      this.manual = false;
     }
   }
 

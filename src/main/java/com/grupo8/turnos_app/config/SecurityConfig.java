@@ -96,6 +96,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.DELETE, "/api/v1/appointments/*").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/today").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/*/appointments").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/services").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/services").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{businessId}/services/{id}").hasAnyRole("OWNER", "ADMIN")

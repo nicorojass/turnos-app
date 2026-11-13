@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentConflictException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentNotAvailableException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidAppointmentException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
 import com.grupo8.turnos_app.modules.appointmentschedule.exception.AppointmentScheduleAlreadyExistsException;
@@ -46,6 +47,12 @@ public class GlobalExceptionHandler {
     
      @ExceptionHandler(InvalidStatusException.class)
     public ResponseEntity<ErrorResponse> handleInvalidStatus(InvalidStatusException ex) {
+        return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorResponse(400, ex.getMessage()));
+    }
+
+    @ExceptionHandler(InvalidAppointmentException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidAppointment(InvalidAppointmentException ex) {
         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .body(new ErrorResponse(400, ex.getMessage()));
     }

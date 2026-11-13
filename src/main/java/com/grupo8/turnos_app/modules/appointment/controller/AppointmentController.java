@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
+import com.grupo8.turnos_app.modules.appointment.dto.CreateAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.service.AppointmentService;
 import com.grupo8.turnos_app.modules.users.entities.User;
 
@@ -36,6 +38,17 @@ public class AppointmentController {
     private final AppointmentService appointmentService;
 
     // ---------- OWNER ENDPOINTS ------------
+
+    // POST /businesses/{id}/appointments - OWNER
+    // one appointment on a specific day and time, free or already booked for a client.
+    // answers 201 with the created appointment
+    @PostMapping("/businesses/{businessId}/appointments")
+    public ResponseEntity<AppointmentResponse> createAppointment(
+            @PathVariable UUID businessId,
+            @RequestBody @Valid CreateAppointmentRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(appointmentService.createAppointment(businessId, request));
+    }
 
     // PUT /appointments/{id}/suspend - OWNER
     @PutMapping("/appointments/{id}/suspend")
