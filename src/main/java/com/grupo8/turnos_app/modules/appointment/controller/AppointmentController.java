@@ -1,5 +1,6 @@
 package com.grupo8.turnos_app.modules.appointment.controller;
 
+import java.time.Instant;
 import java.util.List;
 import java.util.UUID;
 
@@ -121,14 +122,15 @@ public class AppointmentController {
         // guests are limited per ip; logged clients already can't hold more than one unpaid booking
         boolean guest = authentication == null;
         String ip = httpRequest.getRemoteAddr();
-        if (guest)
-            guestBookingLimiter.checkAllowed(ip);
-
-        AppointmentResponse response = appointmentService.bookAppointment(id, request, authentication);
-
-        if (guest)
-            guestBookingLimiter.recordBooking(ip);
-        return ResponseEntity.ok(response);
+        Instant place = guest ? guestBookingLimiter.acquire(ip) : null;
+        try {
+            return ResponseEntity.ok(appointmentService.bookAppointment(id, request, authentication));
+        } catch (RuntimeException e) {
+            // a failed booking doesn't count against the limit
+            if (place != null)
+                guestBookingLimiter.release(ip, place);
+            throw e;
+        }
     }
 
     // POST /appointments/{id}/pay-deposit - PUBLIC

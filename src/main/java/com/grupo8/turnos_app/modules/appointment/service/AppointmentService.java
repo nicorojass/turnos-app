@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
@@ -226,7 +227,10 @@ public class AppointmentService {
   // BOOK APPOINTMENT | /book
   // uses pessimistic lock to avoid double booking on concurrent requests
 
-  @Transactional
+  // READ_COMMITTED so the unpaid-booking check below sees what another request committed while this
+  // one was waiting for the client lock (with the default REPEATABLE READ it kept reading the snapshot
+  // taken before the wait, and parallel requests all passed the check)
+  @Transactional(isolation = Isolation.READ_COMMITTED)
 public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest request, Authentication authentication) {
 
     // step 1: resolve the UUID to the internal id only. loading the whole entity here made step 2 return
@@ -277,7 +281,10 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
         appointment.setClientEmail(clientUser.getEmail());
         appointment.setClientPhone(request.getClientPhone());
     } else {
-        if (request.getClientName() == null || request.getClientEmail() == null) {
+        // blank counts as missing: "   " as name or "" as email left the business without a way to
+        // reach the client
+        if (request.getClientName() == null || request.getClientName().isBlank()
+                || request.getClientEmail() == null || request.getClientEmail().isBlank()) {
             throw new IllegalArgumentException("Ingresa tu nombre y email para reservar el turno.");
         }
         // with the email of an account the booking wasn't linked to it: its owner didn't see it in
@@ -297,8 +304,11 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
         throw new AppointmentConflictException("Ya tenés un turno reservado en este horario.");
     }
 
-    // anti-spam: no se puede reservar si ya tenés un turno pendiente de pago
+    // anti-spam: no se puede reservar si ya tenés un turno pendiente de pago.
+    // the slot lock doesn't serialize two bookings of the same client on different slots, so the client
+    // row is locked too: a second request waits here until the first one commits, and then sees it
   if (clientUser != null) {
+    userRepository.findByIdWithLock(clientUser.getId());
     if (appointmentRepository.hasUnpaidByUser(clientUser.getId())) {
         throw new AppointmentConflictException("Ya tenés un turno pendiente de pago. Completalo antes de reservar otro.");
     }
@@ -404,6 +414,11 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
       throw new ForbiddenOperationException("No tenés permiso para cancelar este turno");
     }
 
+    // once it started it was attended (or missed): cancelling it would take it out of the revenue
+    if (!appointment.getStartDatetime().isAfter(LocalDateTime.now())) {
+      throw new InvalidStatusException("No se puede cancelar un turno que ya empezó.");
+    }
+
     // only BOOKED or AWAITING_PAYMENT appointments can be cancelled
     if (appointment.getStatus() != AppointmentStatus.BOOKED
         && appointment.getStatus() != AppointmentStatus.AWAITING_PAYMENT) {
@@ -496,6 +511,10 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
           "Error al suspender el turno: solo los turnos reservados pueden ser suspendidos.");
     }
 
+    if (!appointment.getStartDatetime().isAfter(LocalDateTime.now())) {
+      throw new InvalidStatusException("No se puede suspender un turno que ya empezó.");
+    }
+
     // an appointment the owner booked by hand for a client (from the agenda) has no deposit, so
     // there's nothing to refund and it just gets suspended. before this it answered 404
     depositRepository.findByAppointmentId(appointment.getId()).ifPresent(deposit -> {
@@ -527,6 +546,10 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
           "Error al eliminar el turno: solo los turnos sin reservar pueden ser eliminados.");
     }
 
+    // a free slot can keep the CANCELED deposit of a reservation that was cancelled or expired.
+    // that row points to the appointment, so it goes first (before, the delete failed with a 500)
+    depositRepository.findByAppointmentId(appointment.getId()).ifPresent(depositRepository::delete);
+    appointment.setDeposit(null);
     appointmentRepository.delete(appointment);
   }
 }

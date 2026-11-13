@@ -31,23 +31,28 @@ public class GuestBookingLimiter {
         this.window = Duration.ofMinutes(windowMinutes);
     }
 
-    public void checkAllowed(String ip) {
-        Deque<Instant> bookings = bookingsByIp.get(ip);
-        if (bookings == null)
-            return;
+    // checks the limit and takes a place in the same step. before, the check and the record were two
+    // separate calls, so parallel requests all passed the check before any of them was recorded.
+    // returns the place taken, to give it back with release() if the booking fails
+    public Instant acquire(String ip) {
+        Deque<Instant> bookings = bookingsByIp.computeIfAbsent(ip, key -> new ArrayDeque<>());
         synchronized (bookings) {
             dropExpired(bookings);
             if (bookings.size() >= maxBookings)
                 throw new TooManyBookingsException(
                         "Hiciste muchas reservas seguidas. Pagá las que tenés pendientes o probá de nuevo en unos minutos.");
+            Instant now = Instant.now();
+            bookings.addLast(now);
+            return now;
         }
     }
 
-    public void recordBooking(String ip) {
-        Deque<Instant> bookings = bookingsByIp.computeIfAbsent(ip, key -> new ArrayDeque<>());
+    public void release(String ip, Instant place) {
+        Deque<Instant> bookings = bookingsByIp.get(ip);
+        if (bookings == null)
+            return;
         synchronized (bookings) {
-            dropExpired(bookings);
-            bookings.addLast(Instant.now());
+            bookings.remove(place);
         }
     }
 
