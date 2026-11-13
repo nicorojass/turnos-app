@@ -74,11 +74,32 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
   // only UNBOOKED and without a deposit row: a reservation that expired goes back to UNBOOKED but keeps
   // its CANCELED deposit pointing to it, and deleting that appointment would break the foreign key.
   // booked or awaiting payment appointments are never touched.
+  // the ones the owner created by hand from the agenda (manual) stay too: they don't come from
+  // the template, so the regeneration would delete them and never create them again
   @Modifying
   @Query("DELETE FROM Appointment a WHERE a.business.id = :businessId " +
-    "AND a.status = 'UNBOOKED' AND a.startDatetime > :now " +
+    "AND a.status = 'UNBOOKED' AND a.startDatetime > :now AND a.manual = false " +
     "AND NOT EXISTS (SELECT d FROM Deposit d WHERE d.appointment = a)")
   int deleteFutureFreeSlots(@Param("businessId") Long businessId, @Param("now") LocalDateTime now);
+
+  // checks if a new appointment would overlap another one of the same business, with the same
+  // rule as the weekly template: same employee and times that cross. without an employee it only
+  // clashes with others without an employee. cancelled and suspended ones already freed the spot.
+  // ending right when the other one starts is fine: 10:00 to 10:30 and 10:30 to 11:00 both fit.
+  // manualOnly: true only looks at the appointments the owner created by hand. the generator uses
+  // it to skip a template slot that would land on top of one of those, and the agenda uses false
+  // so the owner can't put two appointments at the same time for the same person
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.status NOT IN ('CANCELLED', 'SUSPENDED') " +
+    "AND ((:employeeId IS NULL AND a.employee IS NULL) OR a.employee.id = :employeeId) " +
+    "AND a.startDatetime < :endDatetime AND a.endDatetime > :startDatetime " +
+    "AND (:manualOnly = false OR a.manual = true)")
+  boolean existsOverlappingInBusiness(
+    @Param("businessId") Long businessId,
+    @Param("employeeId") Long employeeId,
+    @Param("startDatetime") LocalDateTime startDatetime,
+    @Param("endDatetime") LocalDateTime endDatetime,
+    @Param("manualOnly") boolean manualOnly);
 
   @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.clientUser.id = :userId " +
     "AND ((a.status = 'BOOKED' AND a.endDatetime > :now) OR a.status = 'AWAITING_PAYMENT')")

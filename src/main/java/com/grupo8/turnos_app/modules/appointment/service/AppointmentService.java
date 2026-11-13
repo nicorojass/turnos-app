@@ -22,9 +22,11 @@ import com.grupo8.turnos_app.common.exception.ForbiddenOperationException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
+import com.grupo8.turnos_app.modules.appointment.dto.CreateAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.entity.Appointment;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentConflictException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentNotAvailableException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidAppointmentException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidPriceException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.NoServiceException;
@@ -34,6 +36,7 @@ import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.deposit.entity.Deposit;
 import com.grupo8.turnos_app.modules.deposit.repository.DepositRepository;
+import com.grupo8.turnos_app.modules.service.entity.Serv;
 import com.grupo8.turnos_app.modules.service.repository.ServRepository;
 import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
@@ -126,7 +129,89 @@ public class AppointmentService {
         .collect(java.util.stream.Collectors.toList());
   }
 
-  // -------- SERVICES (BOOK, CANCEL, SUSPEND, DELETE) ------------
+  // -------- SERVICES (CREATE, BOOK, CANCEL, SUSPEND, DELETE) ------------
+  // CREATE APPOINTMENT | POST /businesses/{id}/appointments
+  // the owner creates one appointment on a specific day and time from the agenda in the panel,
+  // outside the weekly template. the end comes from the service duration: a 45 min haircut
+  // starting 2026-11-16 10:00 ends at 10:45.
+  // without client data it's created free (UNBOOKED) and shows up on the public page like any
+  // other slot. with client data it's booked right away (BOOKED) without a deposit, because the
+  // owner is loading an appointment somebody asked for in person or over the phone.
+  // it's marked as manual so the agenda regeneration doesn't delete it (see deleteFutureFreeSlots)
+
+  @Transactional
+  public AppointmentResponse createAppointment(UUID businessId, CreateAppointmentRequest request) {
+
+    Business business = businessRepository.findByPublicId(businessId)
+        .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+
+    // the service has to be from this business and not deleted, otherwise somebody could create
+    // appointments with another business's service by sending its id
+    Serv service = serviceRepository.findByPublicId(request.getServiceId())
+        .filter(s -> s.getBusiness().getId().equals(business.getId()))
+        .filter(s -> !Boolean.TRUE.equals(s.getDeleted()))
+        .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
+
+    // same thing with the employee: it has to be part of this business's team. the team is the
+    // business's employees list (user.getBusiness() is the business a user owns, not where they work)
+    User employee = null;
+    if (request.getEmployeeId() != null) {
+      employee = userRepository.findByPublicId(request.getEmployeeId())
+          .filter(u -> business.getEmployees().stream().anyMatch(e -> e.getId().equals(u.getId())))
+          .orElseThrow(() -> new NotFoundException("Profesional no encontrado"));
+    }
+
+    if (service.getDurationMinutes() == null || service.getDurationMinutes() <= 0) {
+      throw new InvalidAppointmentException("El servicio no tiene una duración cargada.");
+    }
+
+    LocalDateTime start = request.getStartDatetime();
+    if (!start.isAfter(LocalDateTime.now())) {
+      throw new InvalidAppointmentException("No se puede crear un turno en un horario que ya pasó.");
+    }
+    LocalDateTime end = start.plusMinutes(service.getDurationMinutes());
+
+    Long employeeId = employee != null ? employee.getId() : null;
+    if (appointmentRepository.existsOverlappingInBusiness(business.getId(), employeeId, start, end, false)) {
+      throw new AppointmentConflictException(employee != null
+          ? "Ese profesional ya tiene un turno que se superpone con este horario."
+          : "Ya hay un turno sin profesional asignado que se superpone con este horario.");
+    }
+
+    // blank texts count as not sent, so an empty phone field from the form doesn't book anything
+    String clientName = blankToNull(request.getClientName());
+    String clientEmail = blankToNull(request.getClientEmail());
+    String clientPhone = blankToNull(request.getClientPhone());
+    boolean forClient = clientName != null || clientEmail != null || clientPhone != null;
+    if (forClient && clientName == null) {
+      throw new InvalidAppointmentException("Para cargar el turno a nombre de un cliente falta su nombre.");
+    }
+
+    Appointment appointment = Appointment.builder()
+        .startDatetime(start)
+        .endDatetime(end)
+        .status(forClient ? AppointmentStatus.BOOKED : AppointmentStatus.UNBOOKED)
+        .clientName(clientName)
+        .clientEmail(clientEmail)
+        .clientPhone(clientPhone)
+        .reservedAt(forClient ? LocalDateTime.now() : null)
+        .price(service.getPrice())
+        .business(business)
+        .service(service)
+        .employee(employee)
+        .manual(true)
+        .build();
+
+    return AppointmentMapper.toResponse(appointmentRepository.save(appointment));
+  }
+
+  // trims a text and turns it into null if nothing is left: "  " gives null and " Ana " gives "Ana"
+  private String blankToNull(String value) {
+    if (value == null) return null;
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
+
   // BOOK APPOINTMENT | /book
   // uses pessimistic lock to avoid double booking on concurrent requests
 
@@ -373,15 +458,16 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
           "Error al suspender el turno: solo los turnos reservados pueden ser suspendidos.");
     }
 
-    Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
-        .orElseThrow(() -> new NotFoundException("Error al suspender el turno: seña no encontrada para este turno."));
+    // an appointment the owner booked by hand for a client (from the agenda) has no deposit, so
+    // there's nothing to refund and it just gets suspended. before this it answered 404
+    depositRepository.findByAppointmentId(appointment.getId()).ifPresent(deposit -> {
+      deposit.setStatus(DepositStatus.REFUNDED);
+      depositRepository.save(deposit);
+      appointment.setDeposit(deposit);
+    });
 
-    deposit.setStatus(DepositStatus.REFUNDED);
     appointment.setStatus(AppointmentStatus.SUSPENDED);
-
-    depositRepository.save(deposit);
     appointmentRepository.save(appointment);
-    appointment.setDeposit(deposit);
 
     return AppointmentMapper.toResponse(appointment);
   }
