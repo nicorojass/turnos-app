@@ -48,7 +48,7 @@ public class BusinessTypeService {
         BusinessType businessType = businessTypeRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessTypeNotFoundException("Rubro no encontrado"));
 
-        businessType.setDeleted(!businessType.getDeleted());
+        businessType.setDeleted(!Boolean.TRUE.equals(businessType.getDeleted()));
         businessTypeRepository.save(businessType);
     }
 }
