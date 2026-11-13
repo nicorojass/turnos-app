@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentConflictException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentNotAvailableException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidAppointmentException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.TooManyBookingsException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
 import com.grupo8.turnos_app.modules.appointmentschedule.exception.AppointmentScheduleAlreadyExistsException;
@@ -145,6 +146,12 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ErrorResponse> handleAppointmentConflict(AppointmentConflictException ex) {
         return ResponseEntity.status(HttpStatus.CONFLICT)
             .body(new ErrorResponse(409, ex.getMessage()));
+    }
+
+    @ExceptionHandler(TooManyBookingsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyBookings(TooManyBookingsException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(new ErrorResponse(429, ex.getMessage()));
     }
     
     @ExceptionHandler(EmailAlreadyInUseException.class)

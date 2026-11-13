@@ -16,3 +16,6 @@ app.admin.name=
 
 # frontend origins allowed to call the api (comma separated). defaults to http://localhost:4200
 app.cors.allowed-origins=http://localhost:4200
+# guest bookings allowed per ip inside the window an unpaid booking is held. defaults: 3 per 30 minutes
+app.booking.guest-max-per-ip=3
+app.booking.guest-window-minutes=30
