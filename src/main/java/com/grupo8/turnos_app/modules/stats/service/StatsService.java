@@ -47,6 +47,9 @@ public class StatsService {
 
     private static final java.util.Set<String> VALID_PERIODS = java.util.Set.of("TODAY", "WEEK", "MONTH", "YEAR", "CUSTOM");
 
+    private static final LocalDate MIN_STATS_DATE = LocalDate.of(2000, 1, 1);
+    private static final LocalDate MAX_STATS_DATE = LocalDate.of(2100, 12, 31);
+
     private final AppointmentRepository appointmentRepository;
     private final DepositRepository depositRepository;
     private final BusinessRepository businessRepository;
@@ -313,6 +316,9 @@ public class StatsService {
         if (dateFrom != null) {
             if (dateFrom.isAfter(dateTo))
                 throw new IllegalArgumentException("dateFrom no puede ser posterior a dateTo");
+            // a date like 9999-12-31 overflowed the database range (500)
+            if (dateFrom.isBefore(MIN_STATS_DATE) || dateTo.isAfter(MAX_STATS_DATE))
+                throw new IllegalArgumentException("Las fechas tienen que estar entre " + MIN_STATS_DATE + " y " + MAX_STATS_DATE);
             return new LocalDateTime[] { dateFrom.atStartOfDay(), dateTo.plusDays(1).atStartOfDay() };
         }
         if ("CUSTOM".equals(normalized)) {

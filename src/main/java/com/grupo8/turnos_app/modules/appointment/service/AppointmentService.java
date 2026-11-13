@@ -176,6 +176,10 @@ public class AppointmentService {
     if (!start.isAfter(LocalDateTime.now())) {
       throw new InvalidAppointmentException("No se puede crear un turno en un horario que ya pasó.");
     }
+    // a year like 9999 overflowed the database range (500). no agenda plans that far ahead
+    if (start.isAfter(LocalDateTime.now().plusYears(1))) {
+      throw new InvalidAppointmentException("No se puede crear un turno a más de un año.");
+    }
     LocalDateTime end = start.plusMinutes(service.getDurationMinutes());
 
     Long employeeId = employee != null ? employee.getId() : null;
