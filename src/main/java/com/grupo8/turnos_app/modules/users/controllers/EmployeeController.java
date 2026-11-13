@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.grupo8.turnos_app.modules.users.dto.EmployeeRequest;
+import com.grupo8.turnos_app.modules.users.dto.EmployeeUpdateRequest;
 import com.grupo8.turnos_app.modules.users.dto.UserResponse;
 import com.grupo8.turnos_app.modules.users.services.EmployeeService;
 
@@ -51,7 +52,7 @@ public class EmployeeController {
 
     @PutMapping("/employees/{id}")
     public ResponseEntity<UserResponse> updateEmployee(@PathVariable UUID id,
-            @RequestBody @Valid EmployeeRequest request) {
+            @RequestBody @Valid EmployeeUpdateRequest request) {
         return ResponseEntity.ok(employeeService.updateEmployee(id, request));
     }
 
