@@ -52,7 +52,8 @@ public class ServService {
 
     public List<ServResponse> getServicesByBusinessId(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
-            .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+            .filter(found -> !Boolean.TRUE.equals(found.getDeleted()))
+            .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
         List<Serv> services = serviceRepository.findByBusinessIdAndDeletedFalse(business.getId());
         return services.stream()
                 .map(ServMapper::toResponse)

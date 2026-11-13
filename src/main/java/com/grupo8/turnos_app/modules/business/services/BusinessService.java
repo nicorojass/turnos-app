@@ -82,7 +82,9 @@ public class BusinessService {
     }
 
     public BusinessResponse getBusinessBySlug(String slug) {
+        // a deleted business is not public anymore
         return businessRepository.findBySlug(slug)
+                .filter(found -> !Boolean.TRUE.equals(found.getDeleted()))
                 .map(BusinessMapper::toResponse)
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
     }
