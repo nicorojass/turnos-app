@@ -7,6 +7,7 @@ import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
 import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
 import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
@@ -33,6 +34,7 @@ import lombok.RequiredArgsConstructor;
 public class BusinessService {
 
     private final BusinessRepository businessRepository;
+    private final BusinessAccessGuard businessAccessGuard;
     private final UserRepository userRepository;
     private final BusinessTypeRepository businessTypeRepository;
     private final DayScheduleService dayScheduleService;
@@ -69,9 +71,7 @@ public class BusinessService {
     }
 
     public BusinessResponse getBusinessById(UUID publicId) {
-        return businessRepository.findByPublicId(publicId)
-                .map(BusinessMapper::toResponse)
-                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+        return BusinessMapper.toResponse(businessAccessGuard.checkCanManage(publicId));
     }
 
     public List<BusinessResponse> getAllBusinesses() {
@@ -90,6 +90,7 @@ public class BusinessService {
     public BusinessResponse updateBusiness(UUID publicId, BusinessRequest request) {
         Business business = businessRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
 
         // the agenda gets rebuilt from today (like sacaturno) when the automatic agenda is turned on,
         // or when it was already on and the owner changed how many days to create, for example from
@@ -162,6 +163,7 @@ public class BusinessService {
     public BusinessResponse addTypeToBusiness(UUID businessId, UUID typeId) {
         Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
 
         BusinessType businessType = businessTypeRepository.findByPublicId(typeId)
                 .orElseThrow(() -> new BusinessTypeNotFoundException("Tipo de negocio no encontrado"));
@@ -176,6 +178,7 @@ public class BusinessService {
     public BusinessResponse removeTypeFromBusiness(UUID businessId, UUID typeId) {
         Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
 
         BusinessType businessType = businessTypeRepository.findByPublicId(typeId)
                 .orElseThrow(() -> new BusinessTypeNotFoundException("Rubro no encontrado"));

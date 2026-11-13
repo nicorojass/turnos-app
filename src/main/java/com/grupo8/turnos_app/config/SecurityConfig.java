@@ -100,6 +100,8 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/services").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{businessId}/services/{id}").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{businessId}/services/{id}").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/schedule").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{businessId}/schedule").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/appointment-schedules").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/appointment-schedules").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{businessId}/appointment-schedules/{id}").hasAnyRole("OWNER", "ADMIN")

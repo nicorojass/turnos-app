@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
 import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleRequest;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleResponse;
@@ -29,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentScheduleService {
 
     private final AppointmentScheduleRepository appointmentScheduleRepository;
+    private final BusinessAccessGuard businessAccessGuard;
     private final BusinessRepository businessRepository;
     private final ServRepository servRepository;
     private final UserRepository userRepository;
@@ -37,6 +39,7 @@ public class AppointmentScheduleService {
     public List<AppointmentScheduleResponse> getByBusiness(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new NotFoundException("Business not found"));
+        businessAccessGuard.checkCanManage(business);
         return appointmentScheduleRepository.findByBusinessId(business.getId())
                 .stream()
                 .map(AppointmentScheduleMapper::toResponse)
@@ -46,6 +49,7 @@ public class AppointmentScheduleService {
     public AppointmentScheduleResponse create(UUID businessId, AppointmentScheduleRequest request) {
         Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
@@ -93,6 +97,7 @@ public class AppointmentScheduleService {
     public void delete(UUID publicId) {
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
+        businessAccessGuard.checkCanManage(schedule.getBusiness());
         Business business = schedule.getBusiness();
         appointmentScheduleRepository.delete(schedule);
 
@@ -103,6 +108,7 @@ public class AppointmentScheduleService {
     public AppointmentScheduleResponse update(UUID businessId, UUID publicId, AppointmentScheduleRequest request) {
         Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
 
