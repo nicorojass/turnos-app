@@ -277,7 +277,10 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
         appointment.setClientEmail(clientUser.getEmail());
         appointment.setClientPhone(request.getClientPhone());
     } else {
-        if (request.getClientName() == null || request.getClientEmail() == null) {
+        // blank counts as missing: "   " as name or "" as email left the business without a way to
+        // reach the client
+        if (request.getClientName() == null || request.getClientName().isBlank()
+                || request.getClientEmail() == null || request.getClientEmail().isBlank()) {
             throw new IllegalArgumentException("Ingresa tu nombre y email para reservar el turno.");
         }
         // with the email of an account the booking wasn't linked to it: its owner didn't see it in
