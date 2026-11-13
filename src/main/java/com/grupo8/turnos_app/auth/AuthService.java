@@ -12,6 +12,7 @@ import com.grupo8.turnos_app.common.enums.RoleName;
 import com.grupo8.turnos_app.common.exception.EmailAlreadyInUseException;
 import com.grupo8.turnos_app.common.exception.ForbiddenOperationException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.role.entity.Role;
 import com.grupo8.turnos_app.modules.role.repository.RoleRepository;
 import com.grupo8.turnos_app.modules.users.dto.UserResponse;
@@ -27,6 +28,7 @@ public class AuthService {
 
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
+    private final BusinessRepository businessRepository;
     private final PasswordEncoder passwordEncoder;
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
@@ -70,7 +72,20 @@ public class AuthService {
     public UserResponse getMe(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
-        return UserMapper.toResponse(user);
+        UserResponse response = UserMapper.toResponse(user);
+
+        boolean isEmployee = user.getRoles().stream()
+                .anyMatch(role -> role.getName() == RoleName.EMPLOYEE);
+        if (isEmployee) {
+            businessRepository.findByEmployees_Id(user.getId()).stream()
+                    .filter(business -> !Boolean.TRUE.equals(business.getDeleted()))
+                    .findFirst()
+                    .ifPresent(business -> {
+                        response.setBusinessId(business.getPublicId());
+                        response.setBusinessName(business.getName());
+                    });
+        }
+        return response;
     }
 
     public AuthResponse registerClient(RegisterRequest request) {

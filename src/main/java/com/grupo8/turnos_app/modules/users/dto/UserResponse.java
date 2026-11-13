@@ -24,4 +24,6 @@ public class UserResponse {
     private LocalDateTime createdAt;
     private Boolean active;
     private Set<RoleName> roles;
+    private UUID businessId;
+    private String businessName;
 }
