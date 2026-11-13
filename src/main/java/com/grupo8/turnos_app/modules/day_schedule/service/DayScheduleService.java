@@ -79,6 +79,13 @@ public class DayScheduleService {
         .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
     businessAccessGuard.checkCanManage(business);
 
+    // an empty list did nothing and answered 200, and a repeated day silently kept the last one
+    if (requests == null || requests.isEmpty())
+      throw new IllegalArgumentException("Mandá al menos un día");
+    long distinctDays = requests.stream().map(DayScheduleUpdateRequest::getDay).distinct().count();
+    if (distinctDays != requests.size())
+      throw new IllegalArgumentException("Hay un día repetido en la lista");
+
     List<DayScheduleResponse> responses = new ArrayList<>();
     boolean openingChanged = false;
     for (DayScheduleUpdateRequest request : requests) {
