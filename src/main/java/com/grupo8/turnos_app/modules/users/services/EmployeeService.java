@@ -97,6 +97,9 @@ public class EmployeeService {
         if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
         throw new ForbiddenOperationException("El usuario a modificar no es un empleado");
         }
+        if (!request.getEmail().equalsIgnoreCase(employee.getEmail()) && userRepository.existsByEmail(request.getEmail()))
+            throw new EmailAlreadyInUseException("Ya existe una cuenta con este email");
+
         employee.setName(request.getName());
         employee.setEmail(request.getEmail());
         if (request.getPassword() != null && !request.getPassword().isBlank()) {

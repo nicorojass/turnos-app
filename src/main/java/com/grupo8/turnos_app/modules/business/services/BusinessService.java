@@ -92,6 +92,15 @@ public class BusinessService {
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
         businessAccessGuard.checkCanManage(business);
 
+        // same checks as on create, skipping this business. before, a taken slug or email hit the
+        // unique constraint (500) and a taken phone was saved
+        if (businessRepository.existsByEmailAndIdNot(request.getEmail(), business.getId()))
+            throw new BusinessAlreadyExistsException("Ya existe un negocio con ese email");
+        if (businessRepository.existsBySlugAndIdNot(request.getSlug(), business.getId()))
+            throw new BusinessAlreadyExistsException("El link personalizado ya existe. Ingresa uno distinto");
+        if (businessRepository.existsByPhoneAndIdNot(request.getPhone(), business.getId()))
+            throw new BusinessAlreadyExistsException("Ya existe un negocio con ese teléfono");
+
         // the agenda gets rebuilt from today (like sacaturno) when the automatic agenda is turned on,
         // or when it was already on and the owner changed how many days to create, for example from
         // 7 to 30 days. changing only the anticipation doesn't need it: that just moves when the cron
