@@ -1,5 +1,7 @@
 package com.grupo8.turnos_app.config;
 
+import java.io.IOException;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -21,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.grupo8.turnos_app.auth.JwtAuthFilter;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -53,6 +56,12 @@ public class SecurityConfig {
     return new BCryptPasswordEncoder();
   }
 
+  private static void writeError(HttpServletResponse response, int status, String message) throws IOException {
+    response.setStatus(status);
+    response.setContentType("application/json;charset=UTF-8");
+    response.getWriter().write("{\"status\":" + status + ",\"message\":\"" + message + "\"}");
+  }
+
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
     http
@@ -60,6 +69,14 @@ public class SecurityConfig {
         // uses the CorsConfigurationSource bean from CorsConfig, also answers preflight (OPTIONS) requests
         .cors(Customizer.withDefaults())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        // 401 when the request has no valid session (no token, or one that is invalid, expired or of a
+        // deactivated account) and 403 when the user is logged in but can't do it. the front signs out on 401.
+        // both answer with the same json as the rest of the errors
+        .exceptionHandling(exceptions -> exceptions
+            .authenticationEntryPoint((request, response, ex) ->
+                writeError(response, 401, "Tenés que iniciar sesión para hacer esto"))
+            .accessDeniedHandler((request, response, ex) ->
+                writeError(response, 403, "No tenés permiso para hacer esto")))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
