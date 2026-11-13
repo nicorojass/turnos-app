@@ -6,6 +6,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
@@ -24,11 +25,13 @@ public class ServService {
     
     private final ServRepository serviceRepository;
     private final BusinessRepository businessRepository;
+    private final BusinessAccessGuard businessAccessGuard;
 
     public ServResponse createService(UUID businessId, ServRequest request) {
 
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+    businessAccessGuard.checkCanManage(business);
 
     Serv service = ServMapper.toEntity(request);
     service.setBusiness(business);
@@ -53,6 +56,7 @@ public class ServService {
     public ServResponse editService(UUID publicId, ServRequest request) {
     Serv service = serviceRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Service not found"));
+    businessAccessGuard.checkCanManage(service.getBusiness());
 
     if (serviceRepository.existsByBusinessIdAndNameAndDurationMinutesAndPriceAndDepositPorcentage(
             service.getBusiness().getId(), request.getName(), request.getDurationMinutes(),
@@ -71,6 +75,7 @@ public class ServService {
 
     public void deleteService(UUID publicId) {
         Serv service = serviceRepository.findByPublicId(publicId).orElseThrow(() -> new NotFoundException("Service not found"));
+        businessAccessGuard.checkCanManage(service.getBusiness());
         service.setDeleted(true);
         serviceRepository.save(service);
     }

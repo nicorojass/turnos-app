@@ -20,6 +20,7 @@ import com.grupo8.turnos_app.common.enums.DepositStatus;
 import com.grupo8.turnos_app.common.enums.RoleName;
 import com.grupo8.turnos_app.common.exception.ForbiddenOperationException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
 import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.entity.Appointment;
@@ -45,6 +46,7 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentService {
 
   private final AppointmentRepository appointmentRepository;
+  private final BusinessAccessGuard businessAccessGuard;
   private final BusinessRepository businessRepository;
   private final DepositRepository depositRepository;
   private final UserRepository userRepository;
@@ -62,6 +64,7 @@ public class AppointmentService {
 
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new NotFoundException("Business not found"));
+    businessAccessGuard.checkCanManage(business);
 
     Page<Appointment> page = (status != null)
         ? appointmentRepository.findByBusinessIdAndStatus(business.getId(), status, pageable)
@@ -75,6 +78,7 @@ public class AppointmentService {
   public List<AppointmentResponse> getTodayAppointments(UUID businessId) {
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new NotFoundException("Business not found"));
+    businessAccessGuard.checkCanManage(business);
     LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
     LocalDateTime endOfDay = startOfDay.plusDays(1);
 
@@ -367,6 +371,7 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
 
     Appointment appointment = appointmentRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Error al suspender el turno: turno no encontrado."));
+    businessAccessGuard.checkCanManage(appointment.getBusiness());
 
     if (appointment.getStatus() != AppointmentStatus.BOOKED) {
       throw new InvalidStatusException(
@@ -395,6 +400,7 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
 
     Appointment appointment = appointmentRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Error al eliminar el turno: turno no encontrado."));
+    businessAccessGuard.checkCanManage(appointment.getBusiness());
 
     // check status so only unbooked appts are able to be hard deleted
     if (appointment.getStatus() != AppointmentStatus.UNBOOKED) {

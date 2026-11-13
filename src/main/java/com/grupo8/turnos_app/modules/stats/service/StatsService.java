@@ -183,7 +183,15 @@ public class StatsService {
         long cancelled = appointmentRepository.countCancelledByEmployee(employeeId, businessId, from, to);
         long total = appointmentRepository.countByEmployee(employeeId, businessId, from, to);
 
-        double occupancy = total > 0 ? round((double) (finished + upcoming) / total * 100) : 0.0;
+        // same definition as the business occupancy: booked (finished or upcoming) and awaiting payment
+        // over the slots offered to this employee. cancelled and suspended are not offered slots anymore.
+        long awaitingPayment = appointmentRepository.countByEmployeeAndStatus(employeeId, businessId,
+                AppointmentStatus.AWAITING_PAYMENT, from, to);
+        long unbooked = appointmentRepository.countByEmployeeAndStatus(employeeId, businessId,
+                AppointmentStatus.UNBOOKED, from, to);
+        long taken = finished + upcoming + awaitingPayment;
+        long offered = taken + unbooked;
+        double occupancy = offered > 0 ? round((double) taken / offered * 100) : 0.0;
 
         long minutes = appointmentRepository.sumMinutesWorkedByEmployee(employeeId, businessId, from, to, now);
         double hoursWorked = round(minutes / 60.0);

@@ -11,6 +11,7 @@ import com.grupo8.turnos_app.common.enums.RoleName;
 import com.grupo8.turnos_app.common.exception.EmailAlreadyInUseException;
 import com.grupo8.turnos_app.common.exception.ForbiddenOperationException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
 import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
 import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
@@ -33,12 +34,14 @@ public class EmployeeService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final BusinessRepository businessRepository;
+    private final BusinessAccessGuard businessAccessGuard;
     private final PasswordEncoder passwordEncoder;
     private final AppointmentRepository appointmentRepository;
 
     public List<UserResponse> getEmployeesByBusiness(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
         return business.getEmployees().stream()
                 .map(UserMapper::toResponse)
                 .toList();
@@ -77,6 +80,7 @@ public class EmployeeService {
     public UserResponse getEmployee(UUID publicId) {
     User employee = userRepository.findByPublicId(publicId)
             .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+    businessAccessGuard.checkCanManageEmployee(employee);
 
     if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
         throw new NotFoundException("Empleado no encontrado");
@@ -88,6 +92,7 @@ public class EmployeeService {
     public UserResponse updateEmployee(UUID publicId, EmployeeRequest request) {
         User employee = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+        businessAccessGuard.checkCanManageEmployee(employee);
                 
         if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
         throw new ForbiddenOperationException("El usuario a modificar no es un empleado");
@@ -103,6 +108,7 @@ public class EmployeeService {
     public void removeEmployee(UUID publicId) {
         User employee = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+        businessAccessGuard.checkCanManageEmployee(employee);
 
         if (appointmentRepository.hasPendingAppointmentsByEmployee(employee.getId(), LocalDateTime.now())) {
             throw new PendingAppointmentsException("Employee has pending appointments and cannot be removed");

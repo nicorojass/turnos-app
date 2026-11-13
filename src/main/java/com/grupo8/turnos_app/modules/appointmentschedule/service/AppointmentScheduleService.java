@@ -7,6 +7,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
 import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleRequest;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleResponse;
@@ -29,6 +30,7 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentScheduleService {
 
     private final AppointmentScheduleRepository appointmentScheduleRepository;
+    private final BusinessAccessGuard businessAccessGuard;
     private final BusinessRepository businessRepository;
     private final ServRepository servRepository;
     private final UserRepository userRepository;
@@ -37,6 +39,7 @@ public class AppointmentScheduleService {
     public List<AppointmentScheduleResponse> getByBusiness(UUID businessId) {
         Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new NotFoundException("Business not found"));
+        businessAccessGuard.checkCanManage(business);
         return appointmentScheduleRepository.findByBusinessId(business.getId())
                 .stream()
                 .map(AppointmentScheduleMapper::toResponse)
@@ -46,8 +49,10 @@ public class AppointmentScheduleService {
     public AppointmentScheduleResponse create(UUID businessId, AppointmentScheduleRequest request) {
         Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
+                .filter(found -> found.getBusiness().getId().equals(business.getId()))
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
         validateRange(request, service);
@@ -55,6 +60,7 @@ public class AppointmentScheduleService {
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findByPublicId(request.getEmployeeId())
+                    .filter(found -> worksFor(found, business))
                     .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
         }
 
@@ -80,6 +86,11 @@ public class AppointmentScheduleService {
         return AppointmentScheduleMapper.toResponse(saved);
     }
 
+    // a template can only use employees of its own business
+    private boolean worksFor(User employee, Business business) {
+        return business.getEmployees().stream().anyMatch(e -> e.getId().equals(employee.getId()));
+    }
+
     // each entry is one appointment, so it has to fit the service at least once.
     // for example a 45 min haircut doesn't fit between 12:00 and 12:30, but it does between 12:00 and 12:45.
     // used by create and update, before only create checked it.
@@ -93,6 +104,7 @@ public class AppointmentScheduleService {
     public void delete(UUID publicId) {
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
+        businessAccessGuard.checkCanManage(schedule.getBusiness());
         Business business = schedule.getBusiness();
         appointmentScheduleRepository.delete(schedule);
 
@@ -103,10 +115,13 @@ public class AppointmentScheduleService {
     public AppointmentScheduleResponse update(UUID businessId, UUID publicId, AppointmentScheduleRequest request) {
         Business business = businessRepository.findByPublicId(businessId)
                 .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
+                .filter(found -> found.getBusiness().getId().equals(business.getId()))
                 .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
+                .filter(found -> found.getBusiness().getId().equals(business.getId()))
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
         validateRange(request, service);
@@ -114,6 +129,7 @@ public class AppointmentScheduleService {
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findByPublicId(request.getEmployeeId())
+                    .filter(found -> worksFor(found, business))
                     .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
         }
 

@@ -10,6 +10,7 @@ import java.util.UUID;
 import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.enums.DayOfWeek;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
 import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
@@ -33,6 +34,7 @@ public class DayScheduleService {
   private final DayScheduleRepository dayScheduleRepository;
   private final BusinessRepository businessRepository;
   private final AgendaGeneratorService agendaGeneratorService;
+  private final BusinessAccessGuard businessAccessGuard;
 
   // Called by businessService when creating a new business
   // Creates each week's day_schedule with null values to be set later
@@ -56,6 +58,7 @@ public class DayScheduleService {
   public List<DayScheduleResponse> getScheduleByBusiness(UUID businessId) {
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+    businessAccessGuard.checkCanManage(business);
     return dayScheduleRepository.findAllByBusinessId(business.getId())
         .stream()
         .map(DayScheduleMapper::toResponse)
@@ -74,6 +77,7 @@ public class DayScheduleService {
       List<DayScheduleUpdateRequest> requests) {
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+    businessAccessGuard.checkCanManage(business);
 
     List<DayScheduleResponse> responses = new ArrayList<>();
     boolean openingChanged = false;
