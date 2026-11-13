@@ -45,6 +45,8 @@ import lombok.RequiredArgsConstructor;
 // business, employee and admin endpoints.
 public class StatsService {
 
+    private static final java.util.Set<String> VALID_PERIODS = java.util.Set.of("TODAY", "WEEK", "MONTH", "YEAR", "CUSTOM");
+
     private final AppointmentRepository appointmentRepository;
     private final DepositRepository depositRepository;
     private final BusinessRepository businessRepository;
@@ -297,12 +299,27 @@ public class StatsService {
 
     // resolve the date range from a period string (month, week, etc.) or param
     // values dateFrom/dateTo
+    // a wrong period used to fall back to the current month without telling, so the front could show
+    // numbers of another range. now: dateFrom and dateTo together (in order), or a known period
+    // (none means MONTH). CUSTOM is only valid with both dates.
     private LocalDateTime[] resolveDateRange(String period, LocalDate dateFrom, LocalDate dateTo) {
-        if (dateFrom != null && dateTo != null) {
+        String normalized = period != null ? period.trim().toUpperCase() : null;
+        if (normalized != null && !VALID_PERIODS.contains(normalized)) {
+            throw new IllegalArgumentException("Período inválido. Usá TODAY, WEEK, MONTH, YEAR o CUSTOM con dateFrom y dateTo");
+        }
+        if ((dateFrom == null) != (dateTo == null)) {
+            throw new IllegalArgumentException("Mandá dateFrom y dateTo juntos");
+        }
+        if (dateFrom != null) {
+            if (dateFrom.isAfter(dateTo))
+                throw new IllegalArgumentException("dateFrom no puede ser posterior a dateTo");
             return new LocalDateTime[] { dateFrom.atStartOfDay(), dateTo.plusDays(1).atStartOfDay() };
         }
+        if ("CUSTOM".equals(normalized)) {
+            throw new IllegalArgumentException("El período CUSTOM necesita dateFrom y dateTo");
+        }
         LocalDate today = LocalDate.now();
-        return switch (period != null ? period.toUpperCase() : "MONTH") {
+        return switch (normalized != null ? normalized : "MONTH") {
             case "TODAY" -> new LocalDateTime[] { today.atStartOfDay(), today.plusDays(1).atStartOfDay() };
             case "WEEK" -> new LocalDateTime[] {
                     today.with(TemporalAdjusters.previousOrSame(DayOfWeek.MONDAY)).atStartOfDay(),
