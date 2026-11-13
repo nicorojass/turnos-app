@@ -119,6 +119,24 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Param("startDatetime") LocalDateTime startDatetime,
     @Param("endDatetime") LocalDateTime endDatetime);
 
+  // same rule as existsOverlappingInBusiness (manualOnly false), leaving one appointment out
+  @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.business.id = :businessId " +
+    "AND a.id <> :excludeId " +
+    "AND a.status NOT IN ('CANCELLED', 'SUSPENDED') " +
+    "AND ((:employeeId IS NULL AND a.employee IS NULL) OR a.employee.id = :employeeId) " +
+    "AND a.startDatetime < :endDatetime AND a.endDatetime > :startDatetime")
+  boolean existsOverlappingExcluding(
+    @Param("businessId") Long businessId,
+    @Param("employeeId") Long employeeId,
+    @Param("startDatetime") LocalDateTime startDatetime,
+    @Param("endDatetime") LocalDateTime endDatetime,
+    @Param("excludeId") Long excludeId);
+
+  // free appointments the owner created by hand for a service, still to come
+  @Query("SELECT a FROM Appointment a WHERE a.service.id = :serviceId AND a.manual = true " +
+    "AND a.status = 'UNBOOKED' AND a.startDatetime > :now")
+  List<Appointment> findFutureFreeManualByService(@Param("serviceId") Long serviceId, @Param("now") LocalDateTime now);
+
   // same as deleteFutureFreeSlots, only for one service (used when the service is deleted)
   @Modifying
   @Query("DELETE FROM Appointment a WHERE a.service.id = :serviceId " +
