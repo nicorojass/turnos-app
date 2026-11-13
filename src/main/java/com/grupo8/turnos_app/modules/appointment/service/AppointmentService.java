@@ -249,6 +249,12 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
         throw new NoServiceException("Error al reservar: El turno no tiene un servicio asociado.");
     }
 
+    // a deleted service can still have free slots left from before (for example one that kept its
+    // deposit row after an expired reservation), so check it here too
+    if (Boolean.TRUE.equals(appointment.getService().getDeleted())) {
+        throw new AppointmentNotAvailableException("El servicio de este turno ya no está disponible.");
+    }
+
     User clientUser = null;
     if (authentication != null && authentication.isAuthenticated()) {
         clientUser = userRepository.findByEmail(authentication.getName())
