@@ -52,6 +52,7 @@ public class AppointmentScheduleService {
         businessAccessGuard.checkCanManage(business);
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
+                .filter(found -> found.getBusiness().getId().equals(business.getId()))
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
         validateRange(request, service);
@@ -59,6 +60,7 @@ public class AppointmentScheduleService {
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findByPublicId(request.getEmployeeId())
+                    .filter(found -> worksFor(found, business))
                     .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
         }
 
@@ -82,6 +84,11 @@ public class AppointmentScheduleService {
         agendaGeneratorService.regenerate(business);
 
         return AppointmentScheduleMapper.toResponse(saved);
+    }
+
+    // a template can only use employees of its own business
+    private boolean worksFor(User employee, Business business) {
+        return business.getEmployees().stream().anyMatch(e -> e.getId().equals(employee.getId()));
     }
 
     // each entry is one appointment, so it has to fit the service at least once.
@@ -110,9 +117,11 @@ public class AppointmentScheduleService {
                 .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
         businessAccessGuard.checkCanManage(business);
         AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
+                .filter(found -> found.getBusiness().getId().equals(business.getId()))
                 .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
 
         Serv service = servRepository.findByPublicId(request.getServiceId())
+                .filter(found -> found.getBusiness().getId().equals(business.getId()))
                 .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
         validateRange(request, service);
@@ -120,6 +129,7 @@ public class AppointmentScheduleService {
         User employee = null;
         if (request.getEmployeeId() != null) {
             employee = userRepository.findByPublicId(request.getEmployeeId())
+                    .filter(found -> worksFor(found, business))
                     .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
         }
 
