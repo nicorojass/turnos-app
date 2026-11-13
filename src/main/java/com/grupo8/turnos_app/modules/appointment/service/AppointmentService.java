@@ -235,6 +235,11 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
         throw new AppointmentNotAvailableException("El turno ya no está disponible.");
     }
 
+    // the public list hides past slots, but an old link or a direct call could still book one
+    if (!appointment.getStartDatetime().isAfter(LocalDateTime.now())) {
+        throw new AppointmentNotAvailableException("El turno ya pasó.");
+    }
+
     // check if business is active
     if (Boolean.TRUE.equals(appointment.getBusiness().getDeleted())) {
       throw new NotFoundException("El negocio no está disponible.");

@@ -25,8 +25,10 @@ import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.dto.CreateAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.service.AppointmentService;
+import com.grupo8.turnos_app.modules.appointment.service.GuestBookingLimiter;
 import com.grupo8.turnos_app.modules.users.entities.User;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -36,6 +38,7 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
+    private final GuestBookingLimiter guestBookingLimiter;
 
     // ---------- OWNER ENDPOINTS ------------
 
@@ -113,8 +116,19 @@ public class AppointmentController {
     public ResponseEntity<AppointmentResponse> bookAppointment(
             @PathVariable UUID id,
             @RequestBody @Valid BookAppointmentRequest request,
-            Authentication authentication) {
-        return ResponseEntity.ok(appointmentService.bookAppointment(id, request, authentication));
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        // guests are limited per ip; logged clients already can't hold more than one unpaid booking
+        boolean guest = authentication == null;
+        String ip = httpRequest.getRemoteAddr();
+        if (guest)
+            guestBookingLimiter.checkAllowed(ip);
+
+        AppointmentResponse response = appointmentService.bookAppointment(id, request, authentication);
+
+        if (guest)
+            guestBookingLimiter.recordBooking(ip);
+        return ResponseEntity.ok(response);
     }
 
     // POST /appointments/{id}/pay-deposit - PUBLIC
