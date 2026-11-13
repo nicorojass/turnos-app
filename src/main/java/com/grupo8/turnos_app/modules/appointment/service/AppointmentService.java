@@ -149,6 +149,8 @@ public class AppointmentService {
 
     Business business = businessRepository.findByPublicId(businessId)
         .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+    // SecurityConfig only checks the role: without this any OWNER could add appointments to any business
+    businessAccessGuard.checkCanManage(business);
 
     // the service has to be from this business and not deleted, otherwise somebody could create
     // appointments with another business's service by sending its id
