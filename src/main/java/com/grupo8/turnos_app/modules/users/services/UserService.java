@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 import org.springframework.stereotype.Service;
 
 import com.grupo8.turnos_app.common.enums.RoleName;
+import com.grupo8.turnos_app.common.exception.ConflictException;
 import com.grupo8.turnos_app.common.exception.EmailAlreadyInUseException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
@@ -45,9 +46,17 @@ public class UserService {
                 .toList();
     }
 
-    public UserResponse toggleUserActive(UUID publicId) {
+    public UserResponse toggleUserActive(UUID publicId, User currentUser) {
     User user = userRepository.findByPublicId(publicId)
             .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+
+    // an admin deactivating itself, or the last active admin, would leave the platform without one
+    if (Boolean.TRUE.equals(user.getActive())) {
+        if (user.getId().equals(currentUser.getId()))
+            throw new ConflictException("No podés desactivar tu propia cuenta");
+        if (isAdmin(user) && userRepository.countByActiveTrueAndRoles_Name(RoleName.ADMIN) <= 1)
+            throw new ConflictException("No se puede desactivar al último administrador");
+    }
 
     if (Boolean.TRUE.equals(user.getActive())) {
         if (appointmentRepository.hasPendingAppointmentsByUser(user.getId(), LocalDateTime.now()))
@@ -83,9 +92,16 @@ public class UserService {
         userRepository.delete(user);
     }
 
-    public UserResponse updateUserRoles(UUID publicId, Set<RoleName> roleNames) {
+    public UserResponse updateUserRoles(UUID publicId, Set<RoleName> roleNames, User currentUser) {
         User user = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
+
+        // same reason as toggleUserActive: the only admin could remove its own admin role
+        if (user.getId().equals(currentUser.getId()))
+            throw new ConflictException("No podés cambiar tus propios roles");
+        if (isAdmin(user) && !roleNames.contains(RoleName.ADMIN) && Boolean.TRUE.equals(user.getActive())
+                && userRepository.countByActiveTrueAndRoles_Name(RoleName.ADMIN) <= 1)
+            throw new ConflictException("No se puede quitar el rol de administrador al último administrador");
 
         Set<Role> roles = roleNames.stream()
                 .map(roleName -> roleRepository.findByName(roleName)
@@ -95,5 +111,9 @@ public class UserService {
         user.getRoles().clear();
         user.getRoles().addAll(roles);
         return UserMapper.toResponse(userRepository.save(user));
+    }
+
+    private boolean isAdmin(User user) {
+        return user.getRoles().stream().anyMatch(role -> role.getName() == RoleName.ADMIN);
     }
 }

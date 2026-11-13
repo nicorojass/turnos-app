@@ -32,6 +32,8 @@ public class BusinessRequest {
 
     @NotBlank(message = "Ingresa tu link personalizado")
     @Size(max = 100, message = "El link personalizado no puede superar los 100 caracteres")
+    @Pattern(regexp = "^[a-z0-9]+(-[a-z0-9]+)*$",
+            message = "El link personalizado solo puede tener minúsculas, números y guiones entre palabras, por ejemplo: estudio-malbec")
     private String slug;
 
     @NotBlank(message = "Ingresar el teléfono del negocio")

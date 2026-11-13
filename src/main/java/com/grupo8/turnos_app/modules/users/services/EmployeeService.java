@@ -20,6 +20,7 @@ import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.role.entity.Role;
 import com.grupo8.turnos_app.modules.role.repository.RoleRepository;
 import com.grupo8.turnos_app.modules.users.dto.EmployeeRequest;
+import com.grupo8.turnos_app.modules.users.dto.EmployeeUpdateRequest;
 import com.grupo8.turnos_app.modules.users.dto.UserResponse;
 import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.mapper.UserMapper;
@@ -89,7 +90,7 @@ public class EmployeeService {
         return UserMapper.toResponse(employee);
     }
 
-    public UserResponse updateEmployee(UUID publicId, EmployeeRequest request) {
+    public UserResponse updateEmployee(UUID publicId, EmployeeUpdateRequest request) {
         User employee = userRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
         businessAccessGuard.checkCanManageEmployee(employee);

@@ -31,5 +31,7 @@ public class AppointmentResponse {
     private UUID employeeId;
     private String employeeName;
     private LocalDateTime createdAt;
+    // only while AWAITING_PAYMENT: when the unpaid booking is released, in server time
+    private LocalDateTime expiresAt;
     private DepositResponse deposit;
 }
