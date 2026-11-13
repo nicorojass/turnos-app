@@ -30,6 +30,8 @@ public class BusinessAccessGuard {
             return;
         if (business.getOwner() == null || !business.getOwner().getId().equals(currentUser.getId()))
             throw new ForbiddenOperationException("No tenés permiso para gestionar este negocio");
+        if (Boolean.TRUE.equals(business.getDeleted()))
+            throw new BusinessNotFoundException("Negocio no encontrado");
     }
 
     public Business checkCanManage(UUID businessPublicId) {

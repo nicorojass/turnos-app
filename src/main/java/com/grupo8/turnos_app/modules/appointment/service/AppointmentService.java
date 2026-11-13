@@ -100,7 +100,8 @@ public class AppointmentService {
     UUID employeeId) {
 
   Business business = businessRepository.findByPublicId(businessId)
-      .orElseThrow(() -> new NotFoundException("Business not found"));
+      .filter(found -> !Boolean.TRUE.equals(found.getDeleted()))
+      .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
 
   Long serviceInternalId = null;
   if (serviceId != null) {
