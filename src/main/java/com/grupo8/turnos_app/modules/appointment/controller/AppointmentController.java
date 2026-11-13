@@ -75,6 +75,14 @@ public class AppointmentController {
         return ResponseEntity.ok(appointmentService.cancelAppointment(id));
     }
 
+    // GET /appointments/{id} - PUBLIC (client data only for the client, the owner or an admin)
+    @GetMapping("/appointments/{id}")
+    public ResponseEntity<AppointmentResponse> getAppointment(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User authenticatedUser) {
+        return ResponseEntity.ok(appointmentService.getAppointment(id, authenticatedUser));
+    }
+
     // GET /businesses/{id}/appointments/public - PUBLIC
     @GetMapping("/businesses/{businessId}/appointments/public")
     public ResponseEntity<List<AppointmentResponse>> getAvailableSlots(

@@ -88,6 +88,7 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.PUT, "/api/v1/employees/{id}").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/api/v1/employees/{id}").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/public").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/v1/appointments/*").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/book").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/pay-deposit").permitAll()
             .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/cancel").authenticated()

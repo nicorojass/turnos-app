@@ -17,6 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.common.enums.DepositStatus;
+import com.grupo8.turnos_app.common.enums.RoleName;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
@@ -320,6 +321,35 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
     appointment.setDeposit(deposit);
 
     return AppointmentMapper.toResponse(appointment);
+  }
+
+  // GET APPOINTMENT | /appointments/{id} (public)
+  // the payment link (/reserva/:id) is opened without a session, even on another device, so anyone with
+  // the id can read the appointment. the client contact data only goes to the client who booked it,
+  // the business owner or an admin; everyone else gets it as null.
+  @Transactional(readOnly = true)
+  public AppointmentResponse getAppointment(UUID publicId, User currentUser) {
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
+        .orElseThrow(() -> new NotFoundException("Turno no encontrado"));
+
+    AppointmentResponse response = AppointmentMapper.toResponse(appointment);
+    if (!canSeeClientData(appointment, currentUser)) {
+      response.setClientName(null);
+      response.setClientEmail(null);
+      response.setClientPhone(null);
+    }
+    return response;
+  }
+
+  private boolean canSeeClientData(Appointment appointment, User currentUser) {
+    if (currentUser == null)
+      return false;
+    boolean isClient = appointment.getClientUser() != null
+        && appointment.getClientUser().getId().equals(currentUser.getId());
+    boolean isOwner = appointment.getBusiness().getOwner() != null
+        && appointment.getBusiness().getOwner().getId().equals(currentUser.getId());
+    boolean isAdmin = currentUser.getRoles().stream().anyMatch(role -> role.getName() == RoleName.ADMIN);
+    return isClient || isOwner || isAdmin;
   }
 
   // (requested by business owner)
