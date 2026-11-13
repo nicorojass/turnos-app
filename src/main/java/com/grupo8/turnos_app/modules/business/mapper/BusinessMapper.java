@@ -33,16 +33,24 @@ public class BusinessMapper {
     }
 
     public static Business toEntity(BusinessRequest request) {
-        return Business.builder()
+        Business business = Business.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .slug(request.getSlug())
                 .phone(request.getPhone())
                 .description(request.getDescription())
-                .automaticSchedule(request.getAutomaticSchedule())
                 .scheduleEnd(request.getScheduleEnd())
-                .scheduleDaysToCreate(request.getScheduleDaysToCreate())
-                .scheduleAnticipation(request.getScheduleAnticipation())
                 .build();
+
+        // the builder defaults (agenda off, 30 days, 5 days of anticipation) are only kept
+        // when the request leaves these fields out; passing null to the builder would overwrite them
+        if (request.getAutomaticSchedule() != null)
+            business.setAutomaticSchedule(request.getAutomaticSchedule());
+        if (request.getScheduleDaysToCreate() != null)
+            business.setScheduleDaysToCreate(request.getScheduleDaysToCreate());
+        if (request.getScheduleAnticipation() != null)
+            business.setScheduleAnticipation(request.getScheduleAnticipation());
+
+        return business;
     }
 }

@@ -83,7 +83,15 @@ public class StatsService {
                 to);
         long total = finished + upcoming + cancelled + suspended;
 
-        double occupancy = total > 0 ? round((double) (finished + upcoming) / total * 100) : 0.0;
+        // occupancy over the slots that were offered: booked (finished or upcoming) and awaiting payment
+        // count as taken, free slots as offered. cancelled and suspended are not offered slots anymore.
+        long awaitingPayment = appointmentRepository.countByBusinessAndStatus(businessId,
+                AppointmentStatus.AWAITING_PAYMENT, from, to);
+        long unbooked = appointmentRepository.countByBusinessAndStatus(businessId, AppointmentStatus.UNBOOKED,
+                from, to);
+        long taken = finished + upcoming + awaitingPayment;
+        long offered = taken + unbooked;
+        double occupancy = offered > 0 ? round((double) taken / offered * 100) : 0.0;
         double cancellationRate = (finished + upcoming + cancelled) > 0
                 ? round((double) cancelled / (finished + upcoming + cancelled) * 100)
                 : 0.0;
@@ -188,7 +196,7 @@ public class StatsService {
                 .map(r -> ServiceStatsDto.builder()
                         .serviceName((String) r[0])
                         .appointmentCount(((Number) r[1]).longValue())
-                        .revenue(BigDecimal.ZERO)
+                        .revenue((BigDecimal) r[2])
                         .build())
                 .toList();
 
