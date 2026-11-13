@@ -283,16 +283,23 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
     }
   }
 
-    appointment.setStatus(AppointmentStatus.AWAITING_PAYMENT);
     appointment.setReservedAt(LocalDateTime.now());
 
-    // validate outofrange / null percentage: default deposit is set to 30%
+    // null or out of range percentage: default deposit is set to 30%.
+    // 0% is a real choice of the business (no deposit), so it is kept as 0
     BigDecimal depositPercentage = appointment.getService().getDepositPorcentage();
     if (depositPercentage == null
-            || depositPercentage.compareTo(BigDecimal.ZERO) <= 0
+            || depositPercentage.compareTo(BigDecimal.ZERO) < 0
             || depositPercentage.compareTo(new BigDecimal("100")) > 0) {
         depositPercentage = new BigDecimal("30.00");
     }
+    boolean noDeposit = depositPercentage.compareTo(BigDecimal.ZERO) == 0;
+
+    // without deposit there is nothing to pay: the booking is confirmed right away and the deposit
+    // row stays as a $0 deposit already paid, so cancel and suspend keep working the same way
+    appointment.setStatus(noDeposit ? AppointmentStatus.BOOKED : AppointmentStatus.AWAITING_PAYMENT);
+    DepositStatus depositStatus = noDeposit ? DepositStatus.PAID : DepositStatus.PENDING;
+    LocalDateTime paidAt = noDeposit ? LocalDateTime.now() : null;
 
     // calculate deposit amount: price * percentage / 100
     BigDecimal depositAmount = appointment.getPrice()
@@ -303,14 +310,15 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
     Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
             .map(existing -> {
                 existing.setAmount(depositAmount);
-                existing.setStatus(DepositStatus.PENDING);
-                existing.setPaidAt(null);
+                existing.setStatus(depositStatus);
+                existing.setPaidAt(paidAt);
                 return existing;
             })
             .orElseGet(() -> Deposit.builder()
                     .appointment(appointment)
                     .amount(depositAmount)
-                    .status(DepositStatus.PENDING)
+                    .status(depositStatus)
+                    .paidAt(paidAt)
                     .build());
 
     appointmentRepository.save(appointment);
