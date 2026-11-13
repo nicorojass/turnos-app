@@ -122,6 +122,10 @@ public class EmployeeService {
                 .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
 
         employee.getRoles().remove(employeeRole);
+        // the account was created only to work here: without roles it could still sign in and use
+        // every route that only asks for a session. if it has other roles (for example a client) it stays
+        if (employee.getRoles().isEmpty())
+            employee.setActive(false);
         userRepository.save(employee);
 
         List<Business> businesses = businessRepository.findByEmployees_Id(employee.getId());
