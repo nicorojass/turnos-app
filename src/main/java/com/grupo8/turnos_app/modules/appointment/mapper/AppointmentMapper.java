@@ -20,6 +20,8 @@ public class AppointmentMapper {
         .clientPhone(appointment.getClientPhone())
         .price(appointment.getPrice())
         .businessId(appointment.getBusiness().getPublicId())
+        .businessName(appointment.getBusiness().getName())
+        .businessSlug(appointment.getBusiness().getSlug())
         .serviceId(appointment.getService().getPublicId())
         .serviceName(appointment.getService().getName())
         .employeeId(appointment.getEmployee() != null ? appointment.getEmployee().getPublicId() : null)

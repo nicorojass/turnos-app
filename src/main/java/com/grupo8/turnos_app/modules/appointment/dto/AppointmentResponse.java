@@ -24,6 +24,8 @@ public class AppointmentResponse {
     private String clientPhone;
     private BigDecimal price;
     private UUID businessId;
+    private String businessName;
+    private String businessSlug;
     private UUID serviceId;
     private String serviceName;
     private UUID employeeId;
