@@ -13,6 +13,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
@@ -222,7 +223,10 @@ public class AppointmentService {
   // BOOK APPOINTMENT | /book
   // uses pessimistic lock to avoid double booking on concurrent requests
 
-  @Transactional
+  // READ_COMMITTED so the unpaid-booking check below sees what another request committed while this
+  // one was waiting for the client lock (with the default REPEATABLE READ it kept reading the snapshot
+  // taken before the wait, and parallel requests all passed the check)
+  @Transactional(isolation = Isolation.READ_COMMITTED)
 public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest request, Authentication authentication) {
 
     // step 1: resolve the UUID to the internal id only. loading the whole entity here made step 2 return
@@ -293,8 +297,11 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
         throw new AppointmentConflictException("Ya tenés un turno reservado en este horario.");
     }
 
-    // anti-spam: no se puede reservar si ya tenés un turno pendiente de pago
+    // anti-spam: no se puede reservar si ya tenés un turno pendiente de pago.
+    // the slot lock doesn't serialize two bookings of the same client on different slots, so the client
+    // row is locked too: a second request waits here until the first one commits, and then sees it
   if (clientUser != null) {
+    userRepository.findByIdWithLock(clientUser.getId());
     if (appointmentRepository.hasUnpaidByUser(clientUser.getId())) {
         throw new AppointmentConflictException("Ya tenés un turno pendiente de pago. Completalo antes de reservar otro.");
     }
