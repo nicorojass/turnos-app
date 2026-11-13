@@ -95,21 +95,30 @@ public class BusinessService {
         // or when it was already on and the owner changed how many days to create, for example from
         // 7 to 30 days. changing only the anticipation doesn't need it: that just moves when the cron
         // renews. turning it off keeps the free slots already published, sacaturno does the same.
+        // agenda fields left out of the request keep their current value, so a screen that doesn't
+        // edit the agenda can't turn it off or blank its settings by omission
+        Boolean automaticSchedule = request.getAutomaticSchedule() != null
+                ? request.getAutomaticSchedule() : business.getAutomaticSchedule();
+        Integer scheduleDaysToCreate = request.getScheduleDaysToCreate() != null
+                ? request.getScheduleDaysToCreate() : business.getScheduleDaysToCreate();
+
         boolean activatingSchedule = !Boolean.TRUE.equals(business.getAutomaticSchedule())
-                && Boolean.TRUE.equals(request.getAutomaticSchedule());
-        boolean daysToCreateChanged = Boolean.TRUE.equals(request.getAutomaticSchedule())
-                && !Objects.equals(business.getScheduleDaysToCreate(), request.getScheduleDaysToCreate());
+                && Boolean.TRUE.equals(automaticSchedule);
+        boolean daysToCreateChanged = Boolean.TRUE.equals(automaticSchedule)
+                && !Objects.equals(business.getScheduleDaysToCreate(), scheduleDaysToCreate);
 
         business.setName(request.getName());
         business.setEmail(request.getEmail());
         business.setSlug(request.getSlug());
         business.setPhone(request.getPhone());
         business.setDescription(request.getDescription());
-        business.setAutomaticSchedule(request.getAutomaticSchedule());
+        business.setAutomaticSchedule(automaticSchedule);
         // when it regenerates, regenerate sets scheduleEnd itself
-        business.setScheduleEnd(request.getScheduleEnd());
-        business.setScheduleDaysToCreate(request.getScheduleDaysToCreate());
-        business.setScheduleAnticipation(request.getScheduleAnticipation());
+        if (request.getScheduleEnd() != null)
+            business.setScheduleEnd(request.getScheduleEnd());
+        business.setScheduleDaysToCreate(scheduleDaysToCreate);
+        if (request.getScheduleAnticipation() != null)
+            business.setScheduleAnticipation(request.getScheduleAnticipation());
 
         if (request.getTypeIds() != null) {
             List<BusinessType> types = businessTypeRepository.findAllById(request.getTypeIds());
