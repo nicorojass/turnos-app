@@ -169,6 +169,12 @@ public class GlobalExceptionHandler {
             .body(new ErrorResponse(409, ex.getMessage()));
     }
 
+    @ExceptionHandler(TooManyAttemptsException.class)
+    public ResponseEntity<ErrorResponse> handleTooManyAttempts(TooManyAttemptsException ex) {
+        return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+            .body(new ErrorResponse(429, ex.getMessage()));
+    }
+
     @ExceptionHandler(TooManyBookingsException.class)
     public ResponseEntity<ErrorResponse> handleTooManyBookings(TooManyBookingsException ex) {
         return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
