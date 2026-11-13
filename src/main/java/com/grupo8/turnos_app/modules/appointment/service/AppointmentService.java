@@ -276,6 +276,11 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
         if (request.getClientName() == null || request.getClientEmail() == null) {
             throw new IllegalArgumentException("Ingresa tu nombre y email para reservar el turno.");
         }
+        // with the email of an account the booking wasn't linked to it: its owner didn't see it in
+        // "Mis turnos" and couldn't cancel it. that person has to sign in to book with that email
+        if (userRepository.existsByEmail(request.getClientEmail())) {
+            throw new AppointmentConflictException("Ese email pertenece a una cuenta. Iniciá sesión para reservar con él.");
+        }
         appointment.setClientName(request.getClientName());
         appointment.setClientEmail(request.getClientEmail());
         appointment.setClientPhone(request.getClientPhone());
