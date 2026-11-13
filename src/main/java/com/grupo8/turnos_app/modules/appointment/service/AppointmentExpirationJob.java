@@ -19,13 +19,16 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class AppointmentExpirationJob {
 
+    // how long an unpaid booking holds the slot. also used for expiresAt in AppointmentResponse
+    public static final int RESERVATION_MINUTES = 30;
+
     private final AppointmentRepository appointmentRepository;
     private final DepositRepository depositRepository;
 
     @Scheduled(fixedRate = 60000) // runs every 60 seconds
     @Transactional
     public void releaseExpiredReservations() {
-        LocalDateTime expiry = LocalDateTime.now().minusMinutes(30);
+        LocalDateTime expiry = LocalDateTime.now().minusMinutes(RESERVATION_MINUTES);
         List<Appointment> expired = appointmentRepository.findExpiredReservations(expiry);
 
         for (Appointment appointment : expired) {
