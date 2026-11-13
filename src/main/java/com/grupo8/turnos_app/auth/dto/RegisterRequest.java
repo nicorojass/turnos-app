@@ -17,7 +17,7 @@ import lombok.Setter;
 public class RegisterRequest {
 
     @NotBlank(message = "El nombre es obligatorio")
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "El formato del nombre es invalido. No debe contener números")
+    @Pattern(regexp = "^[\\p{L}\\s]+$", message = "El formato del nombre es invalido. No debe contener números")
     private String name;
 
     @NotBlank(message = "El email es obligatorio")

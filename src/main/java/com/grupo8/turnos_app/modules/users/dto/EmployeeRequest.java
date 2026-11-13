@@ -14,7 +14,7 @@ import lombok.Setter;
 public class EmployeeRequest {
 
     @NotBlank(message = "Ingresa el nombre del empleado")
-    @Pattern(regexp = "^[a-zA-Z\\s]+$", message = "El nombre del empleado solo puede contener letras y espacios")
+    @Pattern(regexp = "^[\\p{L}\\s]+$", message = "El nombre del empleado solo puede contener letras y espacios")
     private String name;
 
     @Email
