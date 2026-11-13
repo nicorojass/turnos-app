@@ -13,6 +13,9 @@ public interface BusinessRepository extends JpaRepository<Business, Long> {
     boolean existsByEmail(String email);
     boolean existsBySlug(String slug);
     boolean existsByPhone(String phone);
+    boolean existsByEmailAndIdNot(String email, Long id);
+    boolean existsBySlugAndIdNot(String slug, Long id);
+    boolean existsByPhoneAndIdNot(String phone, Long id);
     Optional<Business> findBySlug(String slug);
     Optional<Business> findByOwner_Id(Long ownerId);
     List<Business> findByEmployees_Id(Long userId);

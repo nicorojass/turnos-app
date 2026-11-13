@@ -36,6 +36,7 @@ public class AuthService {
     public AuthResponse register(RegisterRequest request) {
         if (userRepository.existsByEmailAndActiveTrue(request.getEmail()))
             throw new EmailAlreadyInUseException("El email ya está en uso");
+        checkNotDeactivated(request.getEmail());
 
         Role ownerRole = roleRepository.findByName(RoleName.OWNER)
                 .orElseThrow(() -> new NotFoundException("Rol inexistente"));
@@ -69,6 +70,14 @@ public class AuthService {
         return AuthResponse.builder().token(token).build();
     }
 
+    // the email column is unique, so an email of a deactivated account can't be registered again.
+    // before, this hit the constraint and answered 500
+    private void checkNotDeactivated(String email) {
+        if (userRepository.existsByEmail(email))
+            throw new EmailAlreadyInUseException(
+                    "Ya existe una cuenta desactivada con este email. Contactá al administrador.");
+    }
+
     public UserResponse getMe(String email) {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new NotFoundException("Usuario no encontrado"));
@@ -91,6 +100,7 @@ public class AuthService {
     public AuthResponse registerClient(RegisterRequest request) {
     if (userRepository.existsByEmailAndActiveTrue(request.getEmail()))
         throw new EmailAlreadyInUseException("El email ya está en uso");
+    checkNotDeactivated(request.getEmail());
 
     Role clientRole = roleRepository.findByName(RoleName.CLIENT)
             .orElseThrow(() -> new NotFoundException("Rol inexistente"));
