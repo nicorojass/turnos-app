@@ -18,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.common.enums.DepositStatus;
 import com.grupo8.turnos_app.common.enums.RoleName;
+import com.grupo8.turnos_app.common.exception.ForbiddenOperationException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
 import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
@@ -271,10 +272,15 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
   // FORFEITED
 
   @Transactional
-  public AppointmentResponse cancelAppointment(UUID publicId) {
+  public AppointmentResponse cancelAppointment(UUID publicId, User currentUser) {
 
     Appointment appointment = appointmentRepository.findByPublicId(publicId)
         .orElseThrow(() -> new NotFoundException("Error al cancelar el turno: turno no encontrado."));
+
+    // only the client who booked it can cancel; the owner suspends or deletes instead
+    if (appointment.getClientUser() == null || !appointment.getClientUser().getId().equals(currentUser.getId())) {
+      throw new ForbiddenOperationException("No tenés permiso para cancelar este turno");
+    }
 
     // only BOOKED or AWAITING_PAYMENT appointments can be cancelled
     if (appointment.getStatus() != AppointmentStatus.BOOKED

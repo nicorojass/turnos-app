@@ -69,10 +69,12 @@ public class AppointmentController {
 
     // ------------ PUBLIC / ALL-ROLE ENDPOINTS ----------
 
-    // PUT /appointments/{id}/cancel - OWNER / EMPLOYEE / CLIENT
+    // PUT /appointments/{id}/cancel - CLIENT who booked it
     @PutMapping("/appointments/{id}/cancel")
-    public ResponseEntity<AppointmentResponse> cancelAppointment(@PathVariable UUID id) {
-        return ResponseEntity.ok(appointmentService.cancelAppointment(id));
+    public ResponseEntity<AppointmentResponse> cancelAppointment(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User authenticatedUser) {
+        return ResponseEntity.ok(appointmentService.cancelAppointment(id, authenticatedUser));
     }
 
     // GET /appointments/{id} - PUBLIC (client data only for the client, the owner or an admin)
