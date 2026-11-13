@@ -542,6 +542,10 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
           "Error al eliminar el turno: solo los turnos sin reservar pueden ser eliminados.");
     }
 
+    // a free slot can keep the CANCELED deposit of a reservation that was cancelled or expired.
+    // that row points to the appointment, so it goes first (before, the delete failed with a 500)
+    depositRepository.findByAppointmentId(appointment.getId()).ifPresent(depositRepository::delete);
+    appointment.setDeposit(null);
     appointmentRepository.delete(appointment);
   }
 }
