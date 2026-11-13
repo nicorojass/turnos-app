@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.business.services;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Set;
 import java.util.Objects;
 import java.util.UUID;
 
@@ -41,7 +42,16 @@ public class BusinessService {
     private final AgendaGeneratorService agendaGeneratorService;
     private final AppointmentRepository appointmentRepository;
     
+    // first segments of the front routes: a business with one of these as its link could never be opened
+    public static final Set<String> RESERVED_SLUGS = Set.of("panel", "admin", "ingresar", "reserva", "mis-turnos");
+
+    private void checkSlugNotReserved(String slug) {
+        if (slug != null && RESERVED_SLUGS.contains(slug))
+            throw new BusinessAlreadyExistsException("Ese link está reservado por la aplicación. Elegí otro");
+    }
+
     public BusinessResponse createBusiness(String ownerEmail, BusinessRequest request) {
+        checkSlugNotReserved(request.getSlug());
 
         if (businessRepository.existsByEmail(request.getEmail()))
             throw new BusinessAlreadyExistsException("Ya existe un negocio con ese email");
@@ -91,6 +101,7 @@ public class BusinessService {
         Business business = businessRepository.findByPublicId(publicId)
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
         businessAccessGuard.checkCanManage(business);
+        checkSlugNotReserved(request.getSlug());
 
         // the agenda gets rebuilt from today (like sacaturno) when the automatic agenda is turned on,
         // or when it was already on and the owner changed how many days to create, for example from
