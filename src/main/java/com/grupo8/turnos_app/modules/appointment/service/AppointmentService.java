@@ -410,6 +410,11 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
       throw new ForbiddenOperationException("No tenés permiso para cancelar este turno");
     }
 
+    // once it started it was attended (or missed): cancelling it would take it out of the revenue
+    if (!appointment.getStartDatetime().isAfter(LocalDateTime.now())) {
+      throw new InvalidStatusException("No se puede cancelar un turno que ya empezó.");
+    }
+
     // only BOOKED or AWAITING_PAYMENT appointments can be cancelled
     if (appointment.getStatus() != AppointmentStatus.BOOKED
         && appointment.getStatus() != AppointmentStatus.AWAITING_PAYMENT) {
@@ -500,6 +505,10 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
     if (appointment.getStatus() != AppointmentStatus.BOOKED) {
       throw new InvalidStatusException(
           "Error al suspender el turno: solo los turnos reservados pueden ser suspendidos.");
+    }
+
+    if (!appointment.getStartDatetime().isAfter(LocalDateTime.now())) {
+      throw new InvalidStatusException("No se puede suspender un turno que ya empezó.");
     }
 
     // an appointment the owner booked by hand for a client (from the agenda) has no deposit, so
