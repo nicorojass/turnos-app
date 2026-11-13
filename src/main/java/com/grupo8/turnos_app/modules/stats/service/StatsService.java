@@ -188,7 +188,7 @@ public class StatsService {
                 .map(r -> ServiceStatsDto.builder()
                         .serviceName((String) r[0])
                         .appointmentCount(((Number) r[1]).longValue())
-                        .revenue(BigDecimal.ZERO)
+                        .revenue((BigDecimal) r[2])
                         .build())
                 .toList();
 

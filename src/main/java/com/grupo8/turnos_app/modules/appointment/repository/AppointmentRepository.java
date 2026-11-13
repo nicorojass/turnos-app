@@ -261,8 +261,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, Long> 
     @Param("to") LocalDateTime to,
     @Param("now") LocalDateTime now);
 
-  // [serviceName, count] for employee breakdown
-  @Query("SELECT a.service.name, COUNT(a) FROM Appointment a " +
+  // [serviceName, count, sumPrice] for employee breakdown
+  @Query("SELECT a.service.name, COUNT(a), COALESCE(SUM(a.price), 0) FROM Appointment a " +
     "WHERE a.employee.id = :employeeId AND a.business.id = :businessId " +
     "AND a.status = 'BOOKED' AND a.endDatetime < :now " +
     "AND a.startDatetime >= :from AND a.startDatetime < :to " +
