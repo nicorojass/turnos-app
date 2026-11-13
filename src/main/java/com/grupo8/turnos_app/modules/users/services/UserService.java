@@ -76,6 +76,19 @@ public class UserService {
     } else {
         if (userRepository.existsByEmailAndActiveTrue(user.getEmail()))
             throw new EmailAlreadyInUseException("Ya existe una cuenta activa con este email");
+
+        // deactivating an owner deletes its business, so reactivating it brings the business back.
+        // before, the owner came back unable to edit it and unable to create a new one
+        boolean isOwner = user.getRoles().stream()
+                .anyMatch(r -> RoleName.OWNER.equals(r.getName()));
+        if (isOwner) {
+            businessRepository.findByOwnerId(user.getId()).ifPresent(business -> {
+                if (Boolean.TRUE.equals(business.getDeleted())) {
+                    business.setDeleted(false);
+                    businessRepository.save(business);
+                }
+            });
+        }
     }
 
     user.setActive(!user.getActive());

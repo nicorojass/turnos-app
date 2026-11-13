@@ -14,9 +14,11 @@ import org.springframework.stereotype.Component;
 
 import com.grupo8.turnos_app.common.exception.TooManyAttemptsException;
 
-// without a limit a password could be guessed by brute force. failed logins are counted per email
-// (someone trying passwords on one account) and per ip (someone trying many accounts) inside a window.
-// a successful login clears the count of that email. in memory: enough for a single instance.
+// without a limit a password could be guessed by brute force. failed logins are counted per email and
+// ip together (someone trying passwords on one account) and per ip (someone trying many accounts) inside
+// a window. counting per email alone let anyone lock any account (even the admin's) by sending five
+// wrong passwords with its email: now that only blocks the ip that sent them.
+// a successful login clears the count of that email from that ip. in memory: enough for a single instance.
 @Component
 public class LoginAttemptLimiter {
 
@@ -35,18 +37,18 @@ public class LoginAttemptLimiter {
     }
 
     public void checkAllowed(String email, String ip) {
-        if (count(emailKey(email)) >= maxPerEmail || count(ipKey(ip)) >= maxPerIp)
+        if (count(emailKey(email, ip)) >= maxPerEmail || count(ipKey(ip)) >= maxPerIp)
             throw new TooManyAttemptsException(
                     "Demasiados intentos fallidos. Esperá unos minutos antes de volver a intentar.");
     }
 
     public void recordFailure(String email, String ip) {
-        add(emailKey(email));
+        add(emailKey(email, ip));
         add(ipKey(ip));
     }
 
-    public void recordSuccess(String email) {
-        failures.remove(emailKey(email));
+    public void recordSuccess(String email, String ip) {
+        failures.remove(emailKey(email, ip));
     }
 
     @Scheduled(fixedRate = 600000)
@@ -83,8 +85,8 @@ public class LoginAttemptLimiter {
             attempts.pollFirst();
     }
 
-    private static String emailKey(String email) {
-        return "email:" + (email == null ? "" : email.trim().toLowerCase(Locale.ROOT));
+    private static String emailKey(String email, String ip) {
+        return "email:" + (email == null ? "" : email.trim().toLowerCase(Locale.ROOT)) + "|ip:" + ip;
     }
 
     private static String ipKey(String ip) {
