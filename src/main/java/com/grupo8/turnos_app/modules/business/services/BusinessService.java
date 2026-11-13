@@ -70,7 +70,7 @@ public class BusinessService {
         business.setOwner(owner);
 
         if (request.getTypeIds() != null && !request.getTypeIds().isEmpty()) {
-            List<BusinessType> types = businessTypeRepository.findAllById(request.getTypeIds());
+            List<BusinessType> types = findTypes(request.getTypeIds());
             business.setBusinessTypes(types);
         }
 
@@ -78,6 +78,16 @@ public class BusinessService {
         dayScheduleService.initializeScheduleForBusiness(savedBusiness);
 
         return BusinessMapper.toResponse(savedBusiness);
+    }
+
+    // findAllById silently skipped the ids that don't exist, so the front thought it saved a type
+    // that wasn't saved. deleted types can't be assigned either
+    private List<BusinessType> findTypes(List<Long> typeIds) {
+        List<BusinessType> types = businessTypeRepository.findAllById(typeIds);
+        long requested = typeIds.stream().distinct().count();
+        if (types.size() != requested || types.stream().anyMatch(type -> Boolean.TRUE.equals(type.getDeleted())))
+            throw new BusinessTypeNotFoundException("Rubro no encontrado");
+        return types;
     }
 
     public BusinessResponse getBusinessById(UUID publicId) {
@@ -144,7 +154,7 @@ public class BusinessService {
             business.setScheduleAnticipation(request.getScheduleAnticipation());
 
         if (request.getTypeIds() != null) {
-            List<BusinessType> types = businessTypeRepository.findAllById(request.getTypeIds());
+            List<BusinessType> types = findTypes(request.getTypeIds());
             business.setBusinessTypes(types);
         }
 
