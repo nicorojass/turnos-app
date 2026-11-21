@@ -17,4 +17,5 @@ public class DepositResponse {
     private BigDecimal amount;
     private DepositStatus status;
     private LocalDateTime paidAt;
+    private Integer cancellationNoticeHours;
 }

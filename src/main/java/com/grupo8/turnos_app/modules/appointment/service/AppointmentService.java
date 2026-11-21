@@ -369,12 +369,19 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
             .multiply(depositPercentage)
             .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
 
+    // the deposit keeps the cancellation policy in force right now, so a later change by the owner
+    // doesn't apply to this booking
+    Integer cancellationNoticeHours = appointment.getBusiness().getCancellationNoticeHours() != null
+            ? appointment.getBusiness().getCancellationNoticeHours()
+            : Business.DEFAULT_CANCELLATION_NOTICE_HOURS;
+
     // reuse existing deposit if slot was previously cancelled, otherwise create new
     Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
             .map(existing -> {
                 existing.setAmount(depositAmount);
                 existing.setStatus(depositStatus);
                 existing.setPaidAt(paidAt);
+                existing.setCancellationNoticeHours(cancellationNoticeHours);
                 return existing;
             })
             .orElseGet(() -> Deposit.builder()
@@ -382,6 +389,7 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
                     .amount(depositAmount)
                     .status(depositStatus)
                     .paidAt(paidAt)
+                    .cancellationNoticeHours(cancellationNoticeHours)
                     .build());
 
     appointmentRepository.save(appointment);
@@ -428,8 +436,8 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
 
   // (requested by client user)
   // CANCEL APPOINTMENT | /cancel
-  // >= 24hs till appt makes deposit REFUNDED | < 24hs till appt makes deposit
-  // FORFEITED
+  // >= the deposit's cancellation notice hours till appt makes deposit REFUNDED | less makes it
+  // FORFEITED. it uses the hours copied to the deposit when it was booked, not the business's current ones
 
   @Transactional
   public AppointmentResponse cancelAppointment(UUID publicId, User currentUser) {
@@ -477,7 +485,11 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
       return AppointmentMapper.toResponse(appointment);
     }
 
-    if (hoursUntilAppointment >= 24) {
+    int cancellationNoticeHours = deposit.getCancellationNoticeHours() != null
+        ? deposit.getCancellationNoticeHours()
+        : Business.DEFAULT_CANCELLATION_NOTICE_HOURS;
+
+    if (hoursUntilAppointment >= cancellationNoticeHours) {
       // early cancelation: deposit is returned to the client
       deposit.setStatus(DepositStatus.REFUNDED);
     } else {

@@ -12,6 +12,7 @@ public class DepositMapper {
         .amount(deposit.getAmount())
         .status(deposit.getStatus())
         .paidAt(deposit.getPaidAt())
+        .cancellationNoticeHours(deposit.getCancellationNoticeHours())
         .build();
   }
 }

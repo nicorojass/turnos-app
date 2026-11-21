@@ -47,6 +47,13 @@ public class LegacySchemaRepair {
             update("UPDATE " + table + " SET deleted = 0 WHERE deleted IS NULL", table + ".deleted NULL -> false");
         }
 
+        // the cancellation notice used to be a fixed 24 hours, so that is the policy of the businesses
+        // and the deposits created before it could be configured
+        update("UPDATE businesses SET cancellation_notice_hours = 24 WHERE cancellation_notice_hours IS NULL",
+                "businesses.cancellation_notice_hours NULL -> 24");
+        update("UPDATE deposits SET cancellation_notice_hours = 24 WHERE cancellation_notice_hours IS NULL",
+                "deposits.cancellation_notice_hours NULL -> 24");
+
         // UUID() is evaluated once per row, so each row gets its own id
         update("UPDATE business_types SET public_id = UUID_TO_BIN(UUID()) WHERE public_id = " + ZERO_UUID,
                 "business_types.public_id all zeros -> new uuid");

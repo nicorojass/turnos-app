@@ -50,8 +50,16 @@ public class BusinessService {
             throw new BusinessAlreadyExistsException("Ese link está reservado por la aplicación. Elegí otro");
     }
 
+    // null is fine: it keeps the current value, or the default of 24 on create
+    private void checkCancellationNoticeHours(Integer hours) {
+        if (hours != null && !Business.ALLOWED_CANCELLATION_NOTICE_HOURS.contains(hours))
+            throw new IllegalArgumentException(
+                    "La anticipación para cancelar con devolución de la seña tiene que ser de 24, 48, 72 o 96 horas");
+    }
+
     public BusinessResponse createBusiness(String ownerEmail, BusinessRequest request) {
         checkSlugNotReserved(request.getSlug());
+        checkCancellationNoticeHours(request.getCancellationNoticeHours());
 
         if (businessRepository.existsByEmail(request.getEmail()))
             throw new BusinessAlreadyExistsException("Ya existe un negocio con ese email");
@@ -114,6 +122,7 @@ public class BusinessService {
                 .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
         businessAccessGuard.checkCanManage(business);
         checkSlugNotReserved(request.getSlug());
+        checkCancellationNoticeHours(request.getCancellationNoticeHours());
 
         // same checks as on create, skipping this business. before, a taken slug or email hit the
         // unique constraint (500) and a taken phone was saved
@@ -152,6 +161,9 @@ public class BusinessService {
         business.setScheduleDaysToCreate(scheduleDaysToCreate);
         if (request.getScheduleAnticipation() != null)
             business.setScheduleAnticipation(request.getScheduleAnticipation());
+        // appointments already booked keep the hours copied to their deposit
+        if (request.getCancellationNoticeHours() != null)
+            business.setCancellationNoticeHours(request.getCancellationNoticeHours());
 
         if (request.getTypeIds() != null) {
             List<BusinessType> types = findTypes(request.getTypeIds());

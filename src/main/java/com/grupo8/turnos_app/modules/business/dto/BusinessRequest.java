@@ -54,6 +54,9 @@ public class BusinessRequest {
     @Min(value = 0, message = "La anticipación no puede ser negativa")
     @Max(value = 60, message = "La anticipación no puede superar los 60 días")
     private Integer scheduleAnticipation;
-    
+
+    // 24, 48, 72 or 96. checked in BusinessService, left out it keeps the current value (24 on create)
+    private Integer cancellationNoticeHours;
+
     private List<Long> typeIds;
 }
