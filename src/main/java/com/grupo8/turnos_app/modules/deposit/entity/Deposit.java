@@ -36,6 +36,12 @@ public class Deposit {
     @Column(name = "paid_at")
     private LocalDateTime paidAt;
 
+    // the business's cancellation notice when the appointment was booked. cancelling uses this one,
+    // so changing the policy later doesn't change the rule of appointments already booked.
+    // deposits created before this column existed get 24, the rule they were booked with
+    @Column(name = "cancellation_notice_hours")
+    private Integer cancellationNoticeHours;
+
     @PrePersist
     protected void onCreate() {
         this.publicId = UUID.randomUUID();
