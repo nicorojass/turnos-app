@@ -21,6 +21,7 @@ public class BusinessMapper {
                 .scheduleEnd(business.getScheduleEnd())
                 .scheduleDaysToCreate(business.getScheduleDaysToCreate())
                 .scheduleAnticipation(business.getScheduleAnticipation())
+                .cancellationNoticeHours(business.getCancellationNoticeHours())
                 .deleted(business.getDeleted())
                 .ownerId(business.getOwner().getPublicId())
                 .businessTypes(
@@ -42,14 +43,16 @@ public class BusinessMapper {
                 .scheduleEnd(request.getScheduleEnd())
                 .build();
 
-        // the builder defaults (agenda off, 30 days, 5 days of anticipation) are only kept
-        // when the request leaves these fields out; passing null to the builder would overwrite them
+        // the builder defaults (agenda off, 30 days, 5 days of anticipation, 24 hours to cancel) are only
+        // kept when the request leaves these fields out; passing null to the builder would overwrite them
         if (request.getAutomaticSchedule() != null)
             business.setAutomaticSchedule(request.getAutomaticSchedule());
         if (request.getScheduleDaysToCreate() != null)
             business.setScheduleDaysToCreate(request.getScheduleDaysToCreate());
         if (request.getScheduleAnticipation() != null)
             business.setScheduleAnticipation(request.getScheduleAnticipation());
+        if (request.getCancellationNoticeHours() != null)
+            business.setCancellationNoticeHours(request.getCancellationNoticeHours());
 
         return business;
     }

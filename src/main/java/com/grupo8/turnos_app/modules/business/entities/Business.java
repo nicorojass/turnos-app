@@ -3,6 +3,7 @@ package com.grupo8.turnos_app.modules.business.entities;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 import com.grupo8.turnos_app.modules.users.entities.User;
@@ -34,6 +35,11 @@ import lombok.Setter;
 @AllArgsConstructor
 @Builder
 public class Business {
+
+    // options the owner can pick for how many hours before the appointment a client can still
+    // cancel and get the deposit back
+    public static final int DEFAULT_CANCELLATION_NOTICE_HOURS = 24;
+    public static final Set<Integer> ALLOWED_CANCELLATION_NOTICE_HOURS = Set.of(24, 48, 72, 96);
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -69,6 +75,10 @@ public class Business {
     @Min(0) @Max(60) // validation for a reasonable anticipation days to renew schedule
     @Builder.Default
     private Integer scheduleAnticipation = 5;
+
+    // businesses created before this column existed get the default from LegacySchemaRepair
+    @Builder.Default
+    private Integer cancellationNoticeHours = DEFAULT_CANCELLATION_NOTICE_HOURS;
 
     private Boolean deleted;
 
