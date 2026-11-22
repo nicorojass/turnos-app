@@ -41,6 +41,11 @@ public class Business {
     public static final int DEFAULT_CANCELLATION_NOTICE_HOURS = 24;
     public static final Set<Integer> ALLOWED_CANCELLATION_NOTICE_HOURS = Set.of(24, 48, 72, 96);
 
+    // options the owner can pick for the minimum hours between booking and the start of the
+    // appointment. 0 is how it worked before: a slot can be booked until it starts
+    public static final int DEFAULT_MIN_BOOKING_NOTICE_HOURS = 0;
+    public static final Set<Integer> ALLOWED_MIN_BOOKING_NOTICE_HOURS = Set.of(0, 1, 2, 4, 12, 24);
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
@@ -79,6 +84,11 @@ public class Business {
     // businesses created before this column existed get the default from LegacySchemaRepair
     @Builder.Default
     private Integer cancellationNoticeHours = DEFAULT_CANCELLATION_NOTICE_HOURS;
+
+    // only applies to clients booking a slot. the owner can still add an appointment by hand for
+    // ten minutes from now. businesses created before this column existed get 0 from LegacySchemaRepair
+    @Builder.Default
+    private Integer minBookingNoticeHours = DEFAULT_MIN_BOOKING_NOTICE_HOURS;
 
     private Boolean deleted;
 

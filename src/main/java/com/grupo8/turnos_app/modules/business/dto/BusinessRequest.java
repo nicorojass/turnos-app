@@ -58,5 +58,8 @@ public class BusinessRequest {
     // 24, 48, 72 or 96. checked in BusinessService, left out it keeps the current value (24 on create)
     private Integer cancellationNoticeHours;
 
+    // 0, 1, 2, 4, 12 or 24. checked in BusinessService, left out it keeps the current value (0 on create)
+    private Integer minBookingNoticeHours;
+
     private List<Long> typeIds;
 }
