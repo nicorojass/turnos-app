@@ -57,9 +57,17 @@ public class BusinessService {
                     "La anticipación para cancelar con devolución de la seña tiene que ser de 24, 48, 72 o 96 horas");
     }
 
+    // null is fine: it keeps the current value, or the default of 0 on create
+    private void checkMinBookingNoticeHours(Integer hours) {
+        if (hours != null && !Business.ALLOWED_MIN_BOOKING_NOTICE_HOURS.contains(hours))
+            throw new IllegalArgumentException(
+                    "La anticipación mínima para reservar tiene que ser de 0, 1, 2, 4, 12 o 24 horas");
+    }
+
     public BusinessResponse createBusiness(String ownerEmail, BusinessRequest request) {
         checkSlugNotReserved(request.getSlug());
         checkCancellationNoticeHours(request.getCancellationNoticeHours());
+        checkMinBookingNoticeHours(request.getMinBookingNoticeHours());
 
         if (businessRepository.existsByEmail(request.getEmail()))
             throw new BusinessAlreadyExistsException("Ya existe un negocio con ese email");
@@ -123,6 +131,7 @@ public class BusinessService {
         businessAccessGuard.checkCanManage(business);
         checkSlugNotReserved(request.getSlug());
         checkCancellationNoticeHours(request.getCancellationNoticeHours());
+        checkMinBookingNoticeHours(request.getMinBookingNoticeHours());
 
         // same checks as on create, skipping this business. before, a taken slug or email hit the
         // unique constraint (500) and a taken phone was saved
@@ -164,6 +173,8 @@ public class BusinessService {
         // appointments already booked keep the hours copied to their deposit
         if (request.getCancellationNoticeHours() != null)
             business.setCancellationNoticeHours(request.getCancellationNoticeHours());
+        if (request.getMinBookingNoticeHours() != null)
+            business.setMinBookingNoticeHours(request.getMinBookingNoticeHours());
 
         if (request.getTypeIds() != null) {
             List<BusinessType> types = findTypes(request.getTypeIds());

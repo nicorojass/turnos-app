@@ -118,12 +118,23 @@ public class AppointmentService {
               .getId();
   }
 
+  // slots that start before now plus the business's minimum booking notice can't be booked anymore,
+  // so they aren't listed either
+  LocalDateTime earliestStart = LocalDateTime.now().plusHours(minBookingNoticeHours(business));
+
   return appointmentRepository
-      .findAvailableSlots(business.getId(), LocalDateTime.now(), serviceInternalId, employeeInternalId)
+      .findAvailableSlots(business.getId(), earliestStart, serviceInternalId, employeeInternalId)
       .stream()
       .map(AppointmentMapper::toResponse)
       .collect(Collectors.toList());
 }
+
+  // businesses created before the minimum booking notice existed may still have it empty
+  private static int minBookingNoticeHours(Business business) {
+    return business.getMinBookingNoticeHours() != null
+        ? business.getMinBookingNoticeHours()
+        : Business.DEFAULT_MIN_BOOKING_NOTICE_HOURS;
+  }
 
   // returns all appointments for authed client
   @Transactional(readOnly = true)
@@ -284,6 +295,16 @@ public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest
     // check if business is active
     if (Boolean.TRUE.equals(appointment.getBusiness().getDeleted())) {
       throw new NotFoundException("El negocio no está disponible.");
+    }
+
+    // the business can ask for a minimum notice: with 2 hours, at 15:00 the 16:00 slot can't be booked.
+    // same 409 as a slot that isn't available, since the public list doesn't show it anymore either.
+    // appointments the owner adds by hand go through createAppointment and don't have this rule
+    int minBookingNoticeHours = minBookingNoticeHours(appointment.getBusiness());
+    if (minBookingNoticeHours > 0
+            && !appointment.getStartDatetime().isAfter(LocalDateTime.now().plusHours(minBookingNoticeHours))) {
+        throw new AppointmentNotAvailableException("El turno ya no está disponible: este negocio pide reservar con al menos "
+                + (minBookingNoticeHours == 1 ? "1 hora" : minBookingNoticeHours + " horas") + " de anticipación.");
     }
 
     // validate that appointment has price and service set
