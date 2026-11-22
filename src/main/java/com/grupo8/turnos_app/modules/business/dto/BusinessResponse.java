@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.business.dto;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -15,7 +16,7 @@ import lombok.Setter;
 @Builder
 public class BusinessResponse {
 
-    private Long id;
+    private UUID id;
     private String name;
     private String email;
     private String slug;
@@ -25,7 +26,9 @@ public class BusinessResponse {
     private LocalDateTime scheduleEnd;
     private Integer scheduleDaysToCreate;
     private Integer scheduleAnticipation;
-    private Boolean active;
-    private Long ownerId;
+    private Integer cancellationNoticeHours;
+    private Integer minBookingNoticeHours;
+    private Boolean deleted;
+    private UUID ownerId;
     private List<BusinessTypeResponse> businessTypes;
 }

@@ -1,6 +1,8 @@
 package com.grupo8.turnos_app.modules.business.services;
 
 import java.util.List;
+import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
@@ -21,33 +23,50 @@ public class BusinessTypeService {
     private final BusinessTypeRepository businessTypeRepository;
 
     public BusinessTypeResponse createBusinessType(BusinessTypeRequest request) {
-        if (businessTypeRepository.existsByName(request.getName()))
-            throw new BusinessAlreadyExistsException("A business type with that name already exists");
+        Optional<BusinessType> existing = businessTypeRepository.findByName(request.getName());
+        if (existing.isPresent()) {
+            BusinessType sameName = existing.get();
+            if (!Boolean.TRUE.equals(sameName.getDeleted()))
+                throw new BusinessAlreadyExistsException("Ya existe un rubro con ese nombre");
+
+            // deletion is logical, so the deleted type still holds the unique name: creating it
+            // again brings the deleted one back instead of failing on the unique constraint
+            sameName.setDeleted(false);
+            return BusinessTypeMapper.toResponse(businessTypeRepository.save(sameName));
+        }
 
         BusinessType businessType = BusinessTypeMapper.toEntity(request);
         return BusinessTypeMapper.toResponse(businessTypeRepository.save(businessType));
     }
 
     public List<BusinessTypeResponse> getAllBusinessTypes() {
-        return businessTypeRepository.findAllByActiveTrue()
+        return businessTypeRepository.findAllByDeletedFalse()
                 .stream()
                 .map(BusinessTypeMapper::toResponse)
                 .toList();
     }
 
-    public BusinessTypeResponse updateBusinessType(Long id, BusinessTypeRequest request) {
-        BusinessType businessType = businessTypeRepository.findById(id)
-                .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
+    public BusinessTypeResponse updateBusinessType(UUID publicId, BusinessTypeRequest request) {
+        BusinessType businessType = businessTypeRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new BusinessTypeNotFoundException("Rubro no encontrado"));
+
+        Optional<BusinessType> sameName = businessTypeRepository.findByName(request.getName());
+        if (sameName.isPresent() && !sameName.get().getId().equals(businessType.getId())) {
+            if (Boolean.TRUE.equals(sameName.get().getDeleted()))
+                throw new BusinessAlreadyExistsException(
+                        "Ya existe un rubro eliminado con ese nombre. Crealo de nuevo para reactivarlo");
+            throw new BusinessAlreadyExistsException("Ya existe un rubro con ese nombre");
+        }
 
         businessType.setName(request.getName());
         return BusinessTypeMapper.toResponse(businessTypeRepository.save(businessType));
     }
 
-    public void toggleBusinessTypeActive(Long id) {
-        BusinessType businessType = businessTypeRepository.findById(id)
-                .orElseThrow(() -> new BusinessTypeNotFoundException("Business type not found"));
+    public void toggleBusinessTypeDeleted(UUID publicId) {
+        BusinessType businessType = businessTypeRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new BusinessTypeNotFoundException("Rubro no encontrado"));
 
-        businessType.setActive(!businessType.getActive());
+        businessType.setDeleted(!Boolean.TRUE.equals(businessType.getDeleted()));
         businessTypeRepository.save(businessType);
     }
 }

@@ -187,25 +187,182 @@ El token se obtiene en `POST /api/v1/auth/login`.
 
 ### Administración `/api/v1/admin/users`
 
-| Método | Path          | Descripción                     | Acceso |
-| ------ | ------------- | ------------------------------- | ------ |
-| GET    | `/`           | Listar todos los usuarios.      | ADMIN  |
-| GET    | `/{id}`       | Ver usuario + roles.            | ADMIN  |
-| PATCH  | `/{id}/roles` | Asignar / quitar roles.         | ADMIN  |
-| PATCH  | `/{id}/active`| Activar / desactivar usuario.   | ADMIN  |
-| DELETE | `/{id}`       | Hard delete de usuario.         | ADMIN  |
+| Método | Path           | Descripción                   | Acceso |
+| ------ | -------------- | ----------------------------- | ------ |
+| GET    | `/`            | Listar todos los usuarios.    | ADMIN  |
+| GET    | `/{id}`        | Ver usuario + roles.          | ADMIN  |
+| PATCH  | `/{id}/roles`  | Asignar / quitar roles.       | ADMIN  |
+| PATCH  | `/{id}/active` | Activar / desactivar usuario. | ADMIN  |
+| DELETE | `/{id}`        | Hard delete de usuario.       | ADMIN  |
+
+### Estadísticas `/api/v1`
+
+| Método | Path                                          | Descripción                              | Acceso              |
+| ------ | --------------------------------------------- | ---------------------------------------- | ------------------- |
+| GET    | `/businesses/{id}/stats`                      | Estadísticas globales del negocio.       | OWNER               |
+| GET    | `/businesses/{id}/stats/employees/{empId}`    | Estadísticas individuales del empleado.  | OWNER / propio EMPLOYEE |
+| GET    | `/admin/stats`                                | Métricas globales de la plataforma.      | ADMIN               |
+
+**Query params disponibles en los tres endpoints:**
+
+| Param      | Valores                          | Default  |
+| ---------- | -------------------------------- | -------- |
+| `period`   | `TODAY`, `WEEK`, `MONTH`, `YEAR` | `MONTH`  |
+| `dateFrom` | fecha ISO (`2026-01-01`)         | —        |
+| `dateTo`   | fecha ISO (`2026-03-31`)         | —        |
+
+Si `dateFrom` y `dateTo` están presentes, tienen prioridad sobre `period`.
+
+#### `GET /businesses/{id}/stats` — métricas del negocio
+
+```json
+{
+  "period": { "from": "2026-06-01", "to": "2026-06-30" },
+  "appointments": {
+    "total": 120,
+    "finished": 80,
+    "upcoming": 15,
+    "cancelled": 18,
+    "suspended": 7,
+    "occupancyRate": 79.17,
+    "cancellationRate": 15.97
+  },
+  "revenue": {
+    "totalFromFinished": 450000.00,
+    "depositsCollected": 85000.00,
+    "depositsRefunded": 12000.00,
+    "depositsForfeited": 8000.00
+  },
+  "byService": [
+    { "serviceName": "Corte", "appointmentCount": 50, "revenue": 180000.00 }
+  ],
+  "byEmployee": [
+    { "employeeId": "uuid", "employeeName": "Juan", "appointmentCount": 40, "revenue": 200000.00 }
+  ],
+  "peakDays": [
+    { "dayOfWeek": "FRIDAY", "appointmentCount": 25 }
+  ],
+  "uniqueClientsCount": 62
+}
+```
+
+| Campo | Descripción |
+| ----- | ----------- |
+| `finished` | Turnos con `status = BOOKED` cuya `endDatetime` ya pasó |
+| `upcoming` | Turnos con `status = BOOKED` cuya `endDatetime` es futura |
+| `occupancyRate` | `(finished + upcoming) / total × 100` |
+| `cancellationRate` | `cancelled / (finished + upcoming + cancelled) × 100` |
+| `totalFromFinished` | Suma de `price` de los turnos finalizados |
+| `depositsCollected` | Señas con estado `PAID` en el período |
+| `depositsRefunded` | Señas devueltas por cancelación anticipada (≥ 24 hs) |
+| `depositsForfeited` | Señas retenidas por cancelación tardía (< 24 hs) |
+| `byService` | Turnos finalizados y revenue agrupados por servicio |
+| `byEmployee` | Turnos finalizados y revenue agrupados por empleado |
+| `peakDays` | Días de la semana ordenados por cantidad de turnos reservados |
+| `uniqueClientsCount` | Clientes registrados distintos atendidos en el período |
+
+#### `GET /businesses/{id}/stats/employees/{empId}` — métricas del empleado
+
+```json
+{
+  "employeeId": "uuid",
+  "employeeName": "Juan",
+  "period": { "from": "2026-06-16", "to": "2026-06-22" },
+  "appointments": {
+    "total": 18,
+    "finished": 12,
+    "upcoming": 3,
+    "cancelled": 3,
+    "occupancyRate": 83.33
+  },
+  "hoursWorked": 6.0,
+  "revenueGenerated": 54000.00,
+  "byService": [
+    { "serviceName": "Corte", "appointmentCount": 10, "revenue": 0 }
+  ]
+}
+```
+
+| Campo | Descripción |
+| ----- | ----------- |
+| `hoursWorked` | Suma de `durationMinutes` de los servicios en turnos finalizados, convertida a horas |
+| `revenueGenerated` | Suma de `price` de los turnos finalizados propios del empleado |
+| `byService` | Distribución de servicios realizados por el empleado en el período |
+
+#### `GET /admin/stats` — métricas de la plataforma
+
+```json
+{
+  "period": { "from": "2026-01-01", "to": "2026-12-31" },
+  "totalBusinesses": 45,
+  "activeBusinessesInPeriod": 38,
+  "totalUsers": 320,
+  "newUsersInPeriod": 85,
+  "appointments": {
+    "total": 5400,
+    "finished": 3800,
+    "cancelled": 610,
+    "suspended": 90
+  },
+  "revenue": {
+    "totalFromFinished": 12500000.00,
+    "depositsCollected": 2300000.00,
+    "depositsRefunded": 340000.00,
+    "depositsForfeited": 180000.00
+  },
+  "topBusinesses": [
+    { "businessName": "Peluquería Sol", "appointmentCount": 320, "revenue": 980000.00 }
+  ],
+  "userGrowth": [
+    { "year": 2026, "month": 1, "newUsers": 12 },
+    { "year": 2026, "month": 6, "newUsers": 28 }
+  ]
+}
+```
+
+| Campo | Descripción |
+| ----- | ----------- |
+| `activeBusinessesInPeriod` | Negocios con al menos un turno `BOOKED` en el período |
+| `newUsersInPeriod` | Usuarios registrados durante el período filtrado |
+| `topBusinesses` | Top 10 negocios por cantidad de turnos finalizados |
+| `userGrowth` | Nuevos registros de usuarios por mes en los últimos 6 meses |
 
 ---
 
 ## Flujo de generación de turnos
 
-Los turnos se generan a partir de **plantillas** (`AppointmentSchedule`). Cada plantilla define un bloque recurrente semanal: día de la semana, horario de inicio y fin, servicio y empleado opcional.
+Los turnos se generan a partir de dos configuraciones:
 
-El generador (`AppointmentGeneratorService`) toma cada plantilla y crea slots `UNBOOKED` individuales según la duración del servicio, para los próximos N días (configurado en `scheduleDaysToCreate` del negocio).
+- **`DaySchedule`**: define qué días de la semana están habilitados para el negocio y en qué horario.
+- **`AppointmentSchedule`**: plantilla semanal recurrente que define un turno específico — día, hora de inicio, hora de fin, servicio y empleado opcional.
 
-**Ejemplo:** plantilla viernes 09:00-12:00, servicio de 30 min → genera turnos a las 09:00, 09:30, 10:00... para cada viernes dentro del rango.
+Cada `AppointmentSchedule` genera **exactamente un turno** (`UNBOOKED`) por cada fecha que coincida con su día de la semana y tenga el `DaySchedule` habilitado.
 
-La generación corre automáticamente **todos los días a las 01:00** y también puede dispararse manualmente con `POST /appointment-schedules/generate`.
+**Ejemplo:** plantilla lunes 10:00-10:30, servicio "Corte de pelo" → genera un turno a las 10:00 (turno programado (appointmentSchedule) perteneciente al daySchedule (dia de la semana)) cada lunes (daySchedule) dentro del rango de la agenda.
+
+### Activación
+
+La generación automática requiere que el negocio tenga `automaticSchedule: true`. Los campos relacionados en el negocio son:
+
+| Campo | Default | Descripción |
+|---|---|---|
+| `automaticSchedule` | `false` | Habilita la generación automática |
+| `scheduleDaysToCreate` | `30` | Días de agenda a generar por adelantado |
+| `scheduleAnticipation` | `5` | Días antes del fin de agenda para regenerar |
+| `scheduleEnd` | `null` | Horizonte actual de la agenda. Se actualiza automáticamente |
+
+### Cuándo se generan turnos
+
+| Evento | Comportamiento |
+|---|---|
+| Se activa `automaticSchedule` en un negocio | Genera desde hoy hasta `hoy + scheduleDaysToCreate`. Setea `scheduleEnd` |
+| Se crea un `AppointmentSchedule` nuevo | Genera ese turno desde hoy hasta `scheduleEnd` actual (sin modificar `scheduleEnd`) |
+| Cron diario a las **02:00** | Para cada negocio con `automaticSchedule: true`: si `scheduleEnd - hoy <= scheduleAnticipation`, extiende la agenda `scheduleDaysToCreate` días más desde `scheduleEnd` y actualiza `scheduleEnd` |
+| Endpoint manual `POST /appointment-schedules/generate` | Igual que al crear un `AppointmentSchedule`. Idempotente — no genera duplicados |
+
+### Ventana deslizante
+
+El cron no regenera desde cero sino que extiende la ventana existente. Si la agenda cubre hasta el 1 de julio y `scheduleDaysToCreate = 30`, cuando el cron detecte que quedan ≤ `scheduleAnticipation` días hasta ese límite, genera los siguientes 30 días y mueve `scheduleEnd` al 31 de julio.
 
 ---
 

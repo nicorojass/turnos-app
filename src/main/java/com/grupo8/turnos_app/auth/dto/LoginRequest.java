@@ -16,12 +16,12 @@ import lombok.Setter;
 @Builder
 public class LoginRequest {
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email is not valid")
+    @NotBlank(message = "El email es requerido")
+    @Email(message = "El email no es válido")
     private String email;
 
-    @NotBlank(message = "Password is required")
-    @Size(min = 8, max = 64, message = "Password must be between 8 and 64 characters")
-    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9]).*$", message = "Password must contain at least one uppercase letter, one lowercase letter and one number")
+    @NotBlank(message = "La contraseña es requerida")
+    @Size(min = 8, max = 64, message = "La contraseña debe tener entre 8 y 64 caracteres")
+    @Pattern(regexp = "^(?=.*[A-Z])(?=.*[a-z])(?=.*[0-9]).*$", message = "La contraseña debe contener al menos una letra mayúscula, una letra minúscula y un número")
     private String password;
 }

@@ -26,7 +26,7 @@ public class DayScheduleUpdateRequest {
 
     private LocalTime dayEnd;
 
-    @Min(value = 5, message = "Appointment duration must be at least 5 minutes")
+    @Min(value = 5, message = "Ingresa una duración de turno válida (mínimo 5 minutos)")
     private Integer appointmentDuration;
 
     @NotNull(message = "Enabled is required")

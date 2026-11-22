@@ -1,6 +1,8 @@
 package com.grupo8.turnos_app.modules.users.services;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -9,12 +11,16 @@ import com.grupo8.turnos_app.common.enums.RoleName;
 import com.grupo8.turnos_app.common.exception.EmailAlreadyInUseException;
 import com.grupo8.turnos_app.common.exception.ForbiddenOperationException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
+import com.grupo8.turnos_app.modules.appointment.exceptions.PendingAppointmentsException;
+import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.exceptions.BusinessNotFoundException;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.role.entity.Role;
 import com.grupo8.turnos_app.modules.role.repository.RoleRepository;
 import com.grupo8.turnos_app.modules.users.dto.EmployeeRequest;
+import com.grupo8.turnos_app.modules.users.dto.EmployeeUpdateRequest;
 import com.grupo8.turnos_app.modules.users.dto.UserResponse;
 import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.mapper.UserMapper;
@@ -29,28 +35,31 @@ public class EmployeeService {
     private final UserRepository userRepository;
     private final RoleRepository roleRepository;
     private final BusinessRepository businessRepository;
+    private final BusinessAccessGuard businessAccessGuard;
     private final PasswordEncoder passwordEncoder;
+    private final AppointmentRepository appointmentRepository;
 
-    public List<UserResponse> getEmployeesByBusiness(Long businessId) {
-        Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+    public List<UserResponse> getEmployeesByBusiness(UUID businessId) {
+        Business business = businessRepository.findByPublicId(businessId)
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
         return business.getEmployees().stream()
                 .map(UserMapper::toResponse)
                 .toList();
     }
 
-    public UserResponse createEmployee(Long businessId, EmployeeRequest request, String ownerEmail) {
-        Business business = businessRepository.findById(businessId)
-                .orElseThrow(() -> new BusinessNotFoundException("Business not found"));
+    public UserResponse createEmployee(UUID businessId, EmployeeRequest request, String ownerEmail) {
+        Business business = businessRepository.findByPublicId(businessId)
+                .orElseThrow(() -> new BusinessNotFoundException("Negocio no encontrado"));
 
         User owner = userRepository.findByEmail(ownerEmail)
-                .orElseThrow(() -> new NotFoundException("Owner not found"));
+                .orElseThrow(() -> new NotFoundException("Dueño no encontrado"));
 
         if (!business.getOwner().getId().equals(owner.getId()))
-            throw new ForbiddenOperationException("You are not the owner of this business");
+            throw new ForbiddenOperationException("No tenes permisos para agregar empleados a este negocio");
 
         if (userRepository.existsByEmail(request.getEmail()))
-            throw new EmailAlreadyInUseException("Email already in use");
+            throw new EmailAlreadyInUseException("Ya existe una cuenta con este email");
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
                 .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
@@ -69,24 +78,29 @@ public class EmployeeService {
         return UserMapper.toResponse(savedEmployee);
     }
 
-    public UserResponse getEmployee(Long id) {
-    User employee = userRepository.findById(id)
-            .orElseThrow(() -> new NotFoundException("Employee not found"));
+    public UserResponse getEmployee(UUID publicId) {
+    User employee = userRepository.findByPublicId(publicId)
+            .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+    businessAccessGuard.checkCanManageEmployee(employee);
 
     if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
-        throw new NotFoundException("Employee not found");
+        throw new NotFoundException("Empleado no encontrado");
         }
 
         return UserMapper.toResponse(employee);
     }
 
-    public UserResponse updateEmployee(Long id, EmployeeRequest request) {
-        User employee = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+    public UserResponse updateEmployee(UUID publicId, EmployeeUpdateRequest request) {
+        User employee = userRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+        businessAccessGuard.checkCanManageEmployee(employee);
                 
         if (employee.getRoles().stream().noneMatch(r -> r.getName() == RoleName.EMPLOYEE)) {
-        throw new ForbiddenOperationException("This user is not an employee");
+        throw new ForbiddenOperationException("El usuario a modificar no es un empleado");
         }
+        if (!request.getEmail().equalsIgnoreCase(employee.getEmail()) && userRepository.existsByEmail(request.getEmail()))
+            throw new EmailAlreadyInUseException("Ya existe una cuenta con este email");
+
         employee.setName(request.getName());
         employee.setEmail(request.getEmail());
         if (request.getPassword() != null && !request.getPassword().isBlank()) {
@@ -95,17 +109,26 @@ public class EmployeeService {
         return UserMapper.toResponse(userRepository.save(employee));
     }
 
-    public void removeEmployee(Long id) {
-        User employee = userRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+    public void removeEmployee(UUID publicId) {
+        User employee = userRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+        businessAccessGuard.checkCanManageEmployee(employee);
+
+        if (appointmentRepository.hasPendingAppointmentsByEmployee(employee.getId(), LocalDateTime.now())) {
+            throw new PendingAppointmentsException("Employee has pending appointments and cannot be removed");
+        }
 
         Role employeeRole = roleRepository.findByName(RoleName.EMPLOYEE)
                 .orElseThrow(() -> new NotFoundException("EMPLOYEE role not found"));
 
         employee.getRoles().remove(employeeRole);
+        // the account was created only to work here: without roles it could still sign in and use
+        // every route that only asks for a session. if it has other roles (for example a client) it stays
+        if (employee.getRoles().isEmpty())
+            employee.setActive(false);
         userRepository.save(employee);
 
-        List<Business> businesses = businessRepository.findByEmployees_Id(id);
+        List<Business> businesses = businessRepository.findByEmployees_Id(employee.getId());
         for (Business b : businesses) {
             b.getEmployees().remove(employee);
             businessRepository.save(b);

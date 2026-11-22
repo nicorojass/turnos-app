@@ -1,11 +1,14 @@
 package com.grupo8.turnos_app.config;
 
+import java.io.IOException;
+
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
+import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -20,6 +23,7 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import com.grupo8.turnos_app.auth.JwtAuthFilter;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
 
+import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 
 @Configuration
@@ -32,7 +36,7 @@ public class SecurityConfig {
   @Bean
   public UserDetailsService userDetailsService() {
     return username -> userRepository.findByEmail(username)
-        .orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        .orElseThrow(() -> new UsernameNotFoundException("Usuario no encontrado"));
   }
 
   @Bean
@@ -52,11 +56,27 @@ public class SecurityConfig {
     return new BCryptPasswordEncoder();
   }
 
+  private static void writeError(HttpServletResponse response, int status, String message) throws IOException {
+    response.setStatus(status);
+    response.setContentType("application/json;charset=UTF-8");
+    response.getWriter().write("{\"status\":" + status + ",\"message\":\"" + message + "\"}");
+  }
+
   @Bean
   public SecurityFilterChain securityFilterChain(HttpSecurity http, JwtAuthFilter jwtAuthFilter) throws Exception {
     http
         .csrf(csrf -> csrf.disable())
+        // uses the CorsConfigurationSource bean from CorsConfig, also answers preflight (OPTIONS) requests
+        .cors(Customizer.withDefaults())
         .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+        // 401 when the request has no valid session (no token, or one that is invalid, expired or of a
+        // deactivated account) and 403 when the user is logged in but can't do it. the front signs out on 401.
+        // both answer with the same json as the rest of the errors
+        .exceptionHandling(exceptions -> exceptions
+            .authenticationEntryPoint((request, response, ex) ->
+                writeError(response, 401, "Tenés que iniciar sesión para hacer esto"))
+            .accessDeniedHandler((request, response, ex) ->
+                writeError(response, 403, "No tenés permiso para hacer esto")))
         .authorizeHttpRequests(auth -> auth
             .requestMatchers(HttpMethod.POST, "/api/v1/auth/register").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/auth/login").permitAll()
@@ -70,40 +90,47 @@ public class SecurityConfig {
             .requestMatchers(HttpMethod.POST, "/api/v1/business-types").hasRole("ADMIN")
             .requestMatchers(HttpMethod.PUT, "/api/v1/business-types/**").hasRole("ADMIN")
             .requestMatchers(HttpMethod.DELETE, "/api/v1/business-types/**").hasRole("ADMIN")
-            .requestMatchers(HttpMethod.POST, "/api/v1/businesses").hasRole("OWNER")
-            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{id}").hasRole("OWNER")
-            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/mine").hasRole("OWNER")
-            .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{id}").hasRole("OWNER")
-            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{id}/types/**").hasRole("OWNER")
-            .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{id}/types/**").hasRole("OWNER")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{id}").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/mine").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{id}").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{id}/types/**").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{id}/types/**").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers("/swagger-ui/**").permitAll()
             .requestMatchers("/swagger-ui.html").permitAll()
             .requestMatchers("/v3/api-docs/**").permitAll()
-            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/employees").hasRole("OWNER")
-            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/employees").hasRole("OWNER")
-            .requestMatchers(HttpMethod.GET, "/api/v1/employees/{id}").hasRole("OWNER")
-            .requestMatchers(HttpMethod.PUT, "/api/v1/employees/{id}").hasRole("OWNER")
-            .requestMatchers(HttpMethod.DELETE, "/api/v1/employees/{id}").hasRole("OWNER")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/employees").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/employees").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/employees/{id}").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/employees/{id}").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/employees/{id}").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/public").permitAll()
+            .requestMatchers(HttpMethod.GET, "/api/v1/appointments/*").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/book").permitAll()
             .requestMatchers(HttpMethod.POST, "/api/v1/appointments/*/pay-deposit").permitAll()
             .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/cancel").authenticated()
-            .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/suspend").hasRole("OWNER")
-            .requestMatchers(HttpMethod.DELETE, "/api/v1/appointments/*").hasRole("OWNER")
-            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/today").hasRole("OWNER")
-            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments").hasRole("OWNER")
-            .requestMatchers(HttpMethod.GET, "/businesses/{businessId}/services").permitAll()
-            .requestMatchers(HttpMethod.POST, "/businesses/{businessId}/services").hasRole("OWNER")
-            .requestMatchers(HttpMethod.PUT, "/businesses/{businessId}/services/{id}").hasRole("OWNER")
-            .requestMatchers(HttpMethod.DELETE, "/businesses/{businessId}/services/{id}").hasRole("OWNER")
-            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/appointment-schedules").hasRole("OWNER")
-            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/appointment-schedules").hasRole("OWNER")
-            .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{businessId}/appointment-schedules/{id}").hasRole("OWNER")
-            .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{businessId}/appointment-schedules/{id}").hasRole("OWNER")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/appointments/*/suspend").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/appointments/*").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments/today").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/appointments").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/*/appointments").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/services").permitAll()
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/services").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{businessId}/services/{id}").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{businessId}/services/{id}").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/schedule").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{businessId}/schedule").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/{businessId}/appointment-schedules").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/{businessId}/appointment-schedules").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.PUT, "/api/v1/businesses/{businessId}/appointment-schedules/{id}").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.DELETE, "/api/v1/businesses/{businessId}/appointment-schedules/{id}").hasAnyRole("OWNER", "ADMIN")
             .requestMatchers(HttpMethod.GET, "/api/v1/users/me/appointments").authenticated()
+            .requestMatchers(HttpMethod.GET, "/api/v1/employees/me/appointments").hasRole("EMPLOYEE")
             .requestMatchers(HttpMethod.POST, "/api/v1/auth/register/client").permitAll()
             .requestMatchers(HttpMethod.PATCH, "/api/v1/admin/**").hasRole("ADMIN")
-            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/*/appointment-schedules/generate").hasRole("OWNER")
+            .requestMatchers(HttpMethod.POST, "/api/v1/businesses/*/appointment-schedules/generate").hasAnyRole("OWNER", "ADMIN")
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/stats").authenticated()
+            .requestMatchers(HttpMethod.GET, "/api/v1/businesses/*/stats/employees/*").authenticated()
             .anyRequest().authenticated()
         )
         .authenticationProvider(authenticationProvider())

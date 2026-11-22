@@ -12,12 +12,12 @@ public class ServMapper {
             return null;
         }
         return ServResponse.builder()
-                .id(service.getId())
+                .id(service.getPublicId())
                 .name(service.getName())
                 .durationMinutes(service.getDurationMinutes())
                 .price(service.getPrice())
                 .depositPorcentage(service.getDepositPorcentage())
-                .businessId(service.getBusiness().getId())
+                .businessId(service.getBusiness().getPublicId())
                 .build();
     }
 

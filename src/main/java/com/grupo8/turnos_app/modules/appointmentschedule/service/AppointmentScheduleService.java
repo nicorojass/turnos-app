@@ -1,13 +1,15 @@
 package com.grupo8.turnos_app.modules.appointmentschedule.service;
 
 import java.time.Duration;
-import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.stereotype.Service;
 
+import com.grupo8.turnos_app.common.enums.DayOfWeek;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
-import com.grupo8.turnos_app.modules.appointment.service.AppointmentGeneratorService;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
+import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleRequest;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleResponse;
 import com.grupo8.turnos_app.modules.appointmentschedule.entity.AppointmentSchedule;
@@ -17,6 +19,8 @@ import com.grupo8.turnos_app.modules.appointmentschedule.mapper.AppointmentSched
 import com.grupo8.turnos_app.modules.appointmentschedule.repository.AppointmentScheduleRepository;
 import com.grupo8.turnos_app.modules.business.entities.Business;
 import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
+import com.grupo8.turnos_app.modules.day_schedule.DaySchedules;
+import com.grupo8.turnos_app.modules.day_schedule.repository.DayScheduleRepository;
 import com.grupo8.turnos_app.modules.service.entity.Serv;
 import com.grupo8.turnos_app.modules.service.repository.ServRepository;
 import com.grupo8.turnos_app.modules.users.entities.User;
@@ -29,95 +33,145 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentScheduleService {
 
     private final AppointmentScheduleRepository appointmentScheduleRepository;
+    private final BusinessAccessGuard businessAccessGuard;
     private final BusinessRepository businessRepository;
     private final ServRepository servRepository;
     private final UserRepository userRepository;
-    private final AppointmentGeneratorService appointmentGeneratorService;
+    private final AgendaGeneratorService agendaGeneratorService;
+    private final DayScheduleRepository dayScheduleRepository;
 
-    public List<AppointmentScheduleResponse> getByBusiness(Long businessId) {
-        return appointmentScheduleRepository.findByBusinessId(businessId)
+    public List<AppointmentScheduleResponse> getByBusiness(UUID businessId) {
+        Business business = businessRepository.findByPublicId(businessId)
+                .orElseThrow(() -> new NotFoundException("Business not found"));
+        businessAccessGuard.checkCanManage(business);
+        return appointmentScheduleRepository.findByBusinessId(business.getId())
                 .stream()
                 .map(AppointmentScheduleMapper::toResponse)
                 .toList();
     }
 
-public AppointmentScheduleResponse create(Long businessId, AppointmentScheduleRequest request) {
-    Business business = businessRepository.findById(businessId)
-            .orElseThrow(() -> new NotFoundException("Business not found"));
+    public AppointmentScheduleResponse create(UUID businessId, AppointmentScheduleRequest request) {
+        Business business = businessRepository.findByPublicId(businessId)
+                .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
 
-    Serv service = servRepository.findById(request.getServiceId())
-            .orElseThrow(() -> new NotFoundException("Service not found"));
+        Serv service = servRepository.findByPublicId(request.getServiceId())
+                .filter(found -> found.getBusiness().getId().equals(business.getId()))
+                .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
-    long scheduleMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
-    if (scheduleMinutes < service.getDurationMinutes()) {
-        throw new InvalidScheduleRangeException("The time range must be at least as long as the service duration");
+        validateRange(request, service);
+        validateOpeningHours(request, business);
+
+        User employee = null;
+        if (request.getEmployeeId() != null) {
+            employee = userRepository.findByPublicId(request.getEmployeeId())
+                    .filter(found -> worksFor(found, business))
+                    .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
+        }
+
+        Long employeeId = employee != null ? employee.getId() : null;
+
+        if (appointmentScheduleRepository.existsConflictingSchedule(
+                business.getId(), request.getDayNumber(), request.getStartTime(), request.getEndTime(),
+                employeeId, null)) {
+            throw new AppointmentScheduleAlreadyExistsException("Ya existe un horario para este día, hora y empleado");
+        }
+
+        AppointmentSchedule schedule = AppointmentScheduleMapper.toEntity(request);
+        schedule.setPrice(service.getPrice());
+        schedule.setBusiness(business);
+        schedule.setService(service);
+        schedule.setEmployee(employee);
+
+        AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
+
+        // with the automatic agenda off this does nothing and the entry only stays in the template
+        agendaGeneratorService.regenerate(business);
+
+        return AppointmentScheduleMapper.toResponse(saved);
     }
 
-    User employee = null;
-    if (request.getEmployeeId() != null) {
-        employee = userRepository.findById(request.getEmployeeId())
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
+    // a template can only use employees of its own business
+    private boolean worksFor(User employee, Business business) {
+        return business.getEmployees().stream().anyMatch(e -> e.getId().equals(employee.getId()));
     }
 
-    if (appointmentScheduleRepository.existsConflictingSchedule(
-            businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime(),
-            request.getEmployeeId(), null)) {
-        throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day, time and employee");
-    }
-
-    AppointmentSchedule schedule = AppointmentScheduleMapper.toEntity(request);
-    schedule.setPrice(service.getPrice());
-    schedule.setBusiness(business);
-    schedule.setService(service);
-    schedule.setEmployee(employee);
-
-    AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
-
-    LocalDate today = LocalDate.now();
-    Integer daysToCreate = business.getScheduleDaysToCreate();
-    if (daysToCreate != null) {
-        for (int i = 0; i < daysToCreate; i++) {
-            LocalDate date = today.plusDays(i);
-            if (date.getDayOfWeek().getValue() % 7 == saved.getDayNumber()) {
-                appointmentGeneratorService.generateSlotsForSchedule(business, saved, date);
+    // the template has to fall inside the opening hours set for its day (when they are set).
+    // a day without hours yet doesn't restrict anything, and a closed day keeps the template as a draft.
+    private void validateOpeningHours(AppointmentScheduleRequest request, Business business) {
+        DayOfWeek day = DayOfWeek.values()[request.getDayNumber()];
+        dayScheduleRepository.findByBusinessIdAndDay(business.getId(), day).ifPresent(daySchedule -> {
+            if (!DaySchedules.fitsOpeningHours(daySchedule, request.getStartTime(), request.getEndTime())) {
+                throw new InvalidScheduleRangeException("El horario tiene que estar dentro de la atención del día ("
+                        + daySchedule.getDayStart() + " a " + daySchedule.getDayEnd() + ")");
             }
+        });
+    }
+
+    // each entry is one appointment, so it has to fit the service at least once.
+    // for example a 45 min haircut doesn't fit between 12:00 and 12:30, but it does between 12:00 and 12:45.
+    // used by create and update, before only create checked it.
+    private void validateRange(AppointmentScheduleRequest request, Serv service) {
+        long scheduleMinutes = Duration.between(request.getStartTime(), request.getEndTime()).toMinutes();
+        if (scheduleMinutes < service.getDurationMinutes()) {
+            throw new InvalidScheduleRangeException("El rango de tiempo debe ser al menos tan largo como la duración del servicio");
         }
     }
 
-    return AppointmentScheduleMapper.toResponse(saved);
-}
-
-    public void delete(Long id) {
-        AppointmentSchedule schedule = appointmentScheduleRepository.findById(id)
-                .orElseThrow(() -> new NotFoundException("Appointment schedule not found"));
+    public void delete(UUID publicId) {
+        AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
+                .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
+        businessAccessGuard.checkCanManage(schedule.getBusiness());
+        Business business = schedule.getBusiness();
         appointmentScheduleRepository.delete(schedule);
+
+        // the free slots this entry already generated go away too
+        agendaGeneratorService.regenerate(business);
     }
 
-    public AppointmentScheduleResponse update(Long businessId, Long id, AppointmentScheduleRequest request) {
-    AppointmentSchedule schedule = appointmentScheduleRepository.findById(id)
-            .orElseThrow(() -> new NotFoundException("Appointment schedule not found"));
+    public AppointmentScheduleResponse update(UUID businessId, UUID publicId, AppointmentScheduleRequest request) {
+        Business business = businessRepository.findByPublicId(businessId)
+                .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+        businessAccessGuard.checkCanManage(business);
+        AppointmentSchedule schedule = appointmentScheduleRepository.findByPublicId(publicId)
+                .filter(found -> found.getBusiness().getId().equals(business.getId()))
+                .orElseThrow(() -> new NotFoundException("Turno programado no encontrado"));
 
-    Serv service = servRepository.findById(request.getServiceId())
-            .orElseThrow(() -> new NotFoundException("Service not found"));
+        Serv service = servRepository.findByPublicId(request.getServiceId())
+                .filter(found -> found.getBusiness().getId().equals(business.getId()))
+                .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
 
-    User employee = null;
-    if (request.getEmployeeId() != null) {
-        employee = userRepository.findById(request.getEmployeeId())
-                .orElseThrow(() -> new NotFoundException("Employee not found"));
-    }
+        validateRange(request, service);
+        validateOpeningHours(request, business);
 
-    if (appointmentScheduleRepository.existsConflictingSchedule(
-        businessId, request.getDayNumber(), request.getStartTime(), request.getEndTime(),
-        request.getEmployeeId(), id)) {
-    throw new AppointmentScheduleAlreadyExistsException("A schedule already exists for this day, time and employee");
+        User employee = null;
+        if (request.getEmployeeId() != null) {
+            employee = userRepository.findByPublicId(request.getEmployeeId())
+                    .filter(found -> worksFor(found, business))
+                    .orElseThrow(() -> new NotFoundException("Empleado no encontrado"));
         }
-    schedule.setDayNumber(request.getDayNumber());
-    schedule.setStartTime(request.getStartTime());
-    schedule.setEndTime(request.getEndTime());
-    schedule.setPrice(service.getPrice());
-    schedule.setService(service);
-    schedule.setEmployee(employee);
 
-    return AppointmentScheduleMapper.toResponse(appointmentScheduleRepository.save(schedule));
+        Long employeeId = employee != null ? employee.getId() : null;
+
+        if (appointmentScheduleRepository.existsConflictingSchedule(
+                business.getId(), request.getDayNumber(), request.getStartTime(), request.getEndTime(),
+                employeeId, schedule.getId())) {
+            throw new AppointmentScheduleAlreadyExistsException("Ya existe un horario para este día, hora y empleado");
+        }
+
+        schedule.setDayNumber(request.getDayNumber());
+        schedule.setStartTime(request.getStartTime());
+        schedule.setEndTime(request.getEndTime());
+        schedule.setPrice(service.getPrice());
+        schedule.setService(service);
+        schedule.setEmployee(employee);
+
+        AppointmentSchedule saved = appointmentScheduleRepository.save(schedule);
+
+        // the free slots with the old times are deleted and created again with the new ones.
+        // the ones somebody already booked keep the old time, those are never touched
+        agendaGeneratorService.regenerate(business);
+
+        return AppointmentScheduleMapper.toResponse(saved);
     }
 }

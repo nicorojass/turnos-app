@@ -1,6 +1,7 @@
 package com.grupo8.turnos_app.modules.appointmentschedule.controller;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -13,7 +14,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.grupo8.turnos_app.modules.appointment.service.AppointmentGeneratorService;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
+import com.grupo8.turnos_app.modules.agenda.service.AgendaGeneratorService;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleRequest;
 import com.grupo8.turnos_app.modules.appointmentschedule.dto.AppointmentScheduleResponse;
 import com.grupo8.turnos_app.modules.appointmentschedule.service.AppointmentScheduleService;
@@ -27,36 +29,38 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentScheduleController {
 
     private final AppointmentScheduleService appointmentScheduleService;
-    private final AppointmentGeneratorService appointmentGeneratorService;
+    private final AgendaGeneratorService agendaGeneratorService;
+    private final BusinessAccessGuard businessAccessGuard;
 
     @GetMapping
-    public ResponseEntity<List<AppointmentScheduleResponse>> getByBusiness(@PathVariable Long businessId) {
+    public ResponseEntity<List<AppointmentScheduleResponse>> getByBusiness(@PathVariable UUID businessId) {
         return ResponseEntity.ok(appointmentScheduleService.getByBusiness(businessId));
     }
 
     @PostMapping
     public ResponseEntity<AppointmentScheduleResponse> create(
-        @PathVariable Long businessId,
+        @PathVariable UUID businessId,
         @Valid @RequestBody AppointmentScheduleRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED).body(appointmentScheduleService.create(businessId, request));
     }
 
     @PostMapping("/generate")
-    public ResponseEntity<Void> generateSlots(@PathVariable Long businessId) {
-        appointmentGeneratorService.generateSlotsForBusiness(businessId);
+    public ResponseEntity<Void> generateSlots(@PathVariable UUID businessId) {
+        businessAccessGuard.checkCanManage(businessId);
+        agendaGeneratorService.regenerate(businessId);
         return ResponseEntity.ok().build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
+    public ResponseEntity<Void> delete(@PathVariable UUID id) {
         appointmentScheduleService.delete(id);
         return ResponseEntity.noContent().build();
     }
 
     @PutMapping("/{id}")
     public ResponseEntity<AppointmentScheduleResponse> update(
-        @PathVariable Long businessId,
-        @PathVariable Long id,
+        @PathVariable UUID businessId,
+        @PathVariable UUID id,
         @Valid @RequestBody AppointmentScheduleRequest request) {
         return ResponseEntity.ok(appointmentScheduleService.update(businessId, id, request));
     }

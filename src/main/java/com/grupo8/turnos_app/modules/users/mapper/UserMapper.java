@@ -9,7 +9,7 @@ public class UserMapper {
 
     public static UserResponse toResponse(User user) {
         return UserResponse.builder()
-                .id(user.getId())
+                .id(user.getPublicId())
                 .name(user.getName())
                 .email(user.getEmail())
                 .createdAt(user.getCreatedAt())

@@ -6,24 +6,40 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.List;
+import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Isolation;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.common.enums.DepositStatus;
+import com.grupo8.turnos_app.common.enums.RoleName;
+import com.grupo8.turnos_app.common.exception.ForbiddenOperationException;
 import com.grupo8.turnos_app.common.exception.NotFoundException;
+import com.grupo8.turnos_app.common.security.BusinessAccessGuard;
 import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
+import com.grupo8.turnos_app.modules.appointment.dto.CreateAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.entity.Appointment;
+import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentConflictException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.AppointmentNotAvailableException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidAppointmentException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidPriceException;
 import com.grupo8.turnos_app.modules.appointment.exceptions.InvalidStatusException;
+import com.grupo8.turnos_app.modules.appointment.exceptions.NoServiceException;
 import com.grupo8.turnos_app.modules.appointment.mapper.AppointmentMapper;
 import com.grupo8.turnos_app.modules.appointment.repository.AppointmentRepository;
+import com.grupo8.turnos_app.modules.business.entities.Business;
+import com.grupo8.turnos_app.modules.business.repositories.BusinessRepository;
 import com.grupo8.turnos_app.modules.deposit.entity.Deposit;
 import com.grupo8.turnos_app.modules.deposit.repository.DepositRepository;
+import com.grupo8.turnos_app.modules.service.entity.Serv;
+import com.grupo8.turnos_app.modules.service.repository.ServRepository;
 import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.repositories.UserRepository;
 
@@ -34,50 +50,94 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentService {
 
   private final AppointmentRepository appointmentRepository;
+  private final BusinessAccessGuard businessAccessGuard;
+  private final BusinessRepository businessRepository;
   private final DepositRepository depositRepository;
   private final UserRepository userRepository;
+  private final ServRepository serviceRepository;
+  
 
-  // -------- QUERY FUNCTIONS ------------
+  // -------- QUERY SERVICES ------------
 
   // returns all appointments for a business, paginated and filterable by status
+  @Transactional(readOnly = true)
   public Page<AppointmentResponse> getAppointmentsByBusiness(
-      Long businessId,
+      UUID businessId,
       AppointmentStatus status,
       Pageable pageable) {
 
+    Business business = businessRepository.findByPublicId(businessId)
+        .orElseThrow(() -> new NotFoundException("Business not found"));
+    businessAccessGuard.checkCanManage(business);
+
     Page<Appointment> page = (status != null)
-        ? appointmentRepository.findByBusinessIdAndStatus(businessId, status, pageable)
-        : appointmentRepository.findByBusinessId(businessId, pageable);
+        ? appointmentRepository.findByBusinessIdAndStatus(business.getId(), status, pageable)
+        : appointmentRepository.findByBusinessId(business.getId(), pageable);
 
     return page.map(appointment -> AppointmentMapper.toResponse(appointment));
   }
 
   // returns today's appointments for the owner dashboard
-  public List<AppointmentResponse> getTodayAppointments(Long businessId) {
+  @Transactional(readOnly = true)
+  public List<AppointmentResponse> getTodayAppointments(UUID businessId) {
+    Business business = businessRepository.findByPublicId(businessId)
+        .orElseThrow(() -> new NotFoundException("Business not found"));
+    businessAccessGuard.checkCanManage(business);
     LocalDateTime startOfDay = LocalDate.now().atStartOfDay();
     LocalDateTime endOfDay = startOfDay.plusDays(1);
 
     return appointmentRepository
-        .findTodayAppointments(businessId, startOfDay, endOfDay)
+        .findTodayAppointments(business.getId(), startOfDay, endOfDay)
         .stream()
         .map(appointment -> AppointmentMapper.toResponse(appointment))
         .collect(java.util.stream.Collectors.toList());
   }
 
   // returns future UNBOOKED slots for the public endpoint with optional filters
+  @Transactional(readOnly = true)
   public List<AppointmentResponse> getAvailableSlots(
-      Long businessId,
-      Long serviceId,
-      Long employeeId) {
+    UUID businessId,
+    UUID serviceId,
+    UUID employeeId) {
 
-    return appointmentRepository
-        .findAvailableSlots(businessId, LocalDateTime.now(), serviceId, employeeId)
-        .stream()
-        .map(appointment -> AppointmentMapper.toResponse(appointment))
-        .collect(java.util.stream.Collectors.toList());
+  Business business = businessRepository.findByPublicId(businessId)
+      .filter(found -> !Boolean.TRUE.equals(found.getDeleted()))
+      .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+
+  Long serviceInternalId = null;
+  if (serviceId != null) {
+      serviceInternalId = serviceRepository.findByPublicId(serviceId)
+              .orElseThrow(() -> new NotFoundException("Service not found"))
+              .getId();
+  }
+
+  Long employeeInternalId = null;
+  if (employeeId != null) {
+      employeeInternalId = userRepository.findByPublicId(employeeId)
+              .orElseThrow(() -> new NotFoundException("Employee not found"))
+              .getId();
+  }
+
+  // slots that start before now plus the business's minimum booking notice can't be booked anymore,
+  // so they aren't listed either
+  LocalDateTime earliestStart = LocalDateTime.now().plusHours(minBookingNoticeHours(business));
+
+  return appointmentRepository
+      .findAvailableSlots(business.getId(), earliestStart, serviceInternalId, employeeInternalId)
+      .stream()
+      .map(AppointmentMapper::toResponse)
+      .collect(Collectors.toList());
+}
+
+  // businesses created before the minimum booking notice existed may still have it empty
+  private static int minBookingNoticeHours(Business business) {
+    return business.getMinBookingNoticeHours() != null
+        ? business.getMinBookingNoticeHours()
+        : Business.DEFAULT_MIN_BOOKING_NOTICE_HOURS;
   }
 
   // returns all appointments for authed client
+  @Transactional(readOnly = true)
   public List<AppointmentResponse> getMyAppointments(Long clientUserId) {
     return appointmentRepository
         .findByClientUserIdOrderByStartDatetimeDesc(clientUserId)
@@ -85,84 +145,302 @@ public class AppointmentService {
         .map(appointment -> AppointmentMapper.toResponse(appointment))
         .collect(java.util.stream.Collectors.toList());
   }
-  // -----------
+
+  // returns the appointments assigned to the logged employee, for the "mis turnos" screen of
+  // the panel. only the ones where appointment.employee is this user, so an employee never sees
+  // the agenda of a coworker. without dates it goes from 2000 to 2100, that's simpler than
+  // null checks on dates in the query. dateTo is inclusive, so it becomes the next day at 00:00
+  @Transactional(readOnly = true)
+  public Page<AppointmentResponse> getEmployeeAppointments(
+      User employee,
+      AppointmentStatus status,
+      LocalDate dateFrom,
+      LocalDate dateTo,
+      Pageable pageable) {
+
+    if (dateFrom != null && dateTo != null && dateFrom.isAfter(dateTo)) {
+      throw new InvalidAppointmentException("La fecha desde no puede ser posterior a la fecha hasta");
+    }
+
+    LocalDateTime from = (dateFrom != null)
+        ? dateFrom.atStartOfDay()
+        : LocalDate.of(2000, 1, 1).atStartOfDay();
+    LocalDateTime to = (dateTo != null)
+        ? dateTo.plusDays(1).atStartOfDay()
+        : LocalDate.of(2100, 1, 1).atStartOfDay();
+
+    return appointmentRepository
+        .findByEmployeeInRange(employee.getId(), status, from, to, pageable)
+        .map(AppointmentMapper::toResponse);
+  }
+
+  // -------- SERVICES (CREATE, BOOK, CANCEL, SUSPEND, DELETE) ------------
+  // CREATE APPOINTMENT | POST /businesses/{id}/appointments
+  // the owner creates one appointment on a specific day and time from the agenda in the panel,
+  // outside the weekly template. the end comes from the service duration: a 45 min haircut
+  // starting 2026-11-16 10:00 ends at 10:45.
+  // without client data it's created free (UNBOOKED) and shows up on the public page like any
+  // other slot. with client data it's booked right away (BOOKED) without a deposit, because the
+  // owner is loading an appointment somebody asked for in person or over the phone.
+  // it's marked as manual so the agenda regeneration doesn't delete it (see deleteFutureFreeSlots)
+
+  @Transactional
+  public AppointmentResponse createAppointment(UUID businessId, CreateAppointmentRequest request) {
+
+    Business business = businessRepository.findByPublicId(businessId)
+        .orElseThrow(() -> new NotFoundException("Negocio no encontrado"));
+    // SecurityConfig only checks the role: without this any OWNER could add appointments to any business
+    businessAccessGuard.checkCanManage(business);
+
+    // the service has to be from this business and not deleted, otherwise somebody could create
+    // appointments with another business's service by sending its id
+    Serv service = serviceRepository.findByPublicId(request.getServiceId())
+        .filter(s -> s.getBusiness().getId().equals(business.getId()))
+        .filter(s -> !Boolean.TRUE.equals(s.getDeleted()))
+        .orElseThrow(() -> new NotFoundException("Servicio no encontrado"));
+
+    // same thing with the employee: it has to be part of this business's team. the team is the
+    // business's employees list (user.getBusiness() is the business a user owns, not where they work)
+    User employee = null;
+    if (request.getEmployeeId() != null) {
+      employee = userRepository.findByPublicId(request.getEmployeeId())
+          .filter(u -> business.getEmployees().stream().anyMatch(e -> e.getId().equals(u.getId())))
+          .orElseThrow(() -> new NotFoundException("Profesional no encontrado"));
+    }
+
+    if (service.getDurationMinutes() == null || service.getDurationMinutes() <= 0) {
+      throw new InvalidAppointmentException("El servicio no tiene una duración cargada.");
+    }
+
+    LocalDateTime start = request.getStartDatetime();
+    if (!start.isAfter(LocalDateTime.now())) {
+      throw new InvalidAppointmentException("No se puede crear un turno en un horario que ya pasó.");
+    }
+    // a year like 9999 overflowed the database range (500). no agenda plans that far ahead
+    if (start.isAfter(LocalDateTime.now().plusYears(1))) {
+      throw new InvalidAppointmentException("No se puede crear un turno a más de un año.");
+    }
+    LocalDateTime end = start.plusMinutes(service.getDurationMinutes());
+
+    Long employeeId = employee != null ? employee.getId() : null;
+    if (appointmentRepository.existsOverlappingInBusiness(business.getId(), employeeId, start, end, false)) {
+      throw new AppointmentConflictException(employee != null
+          ? "Ese profesional ya tiene un turno que se superpone con este horario."
+          : "Ya hay un turno sin profesional asignado que se superpone con este horario.");
+    }
+
+    // blank texts count as not sent, so an empty phone field from the form doesn't book anything
+    String clientName = blankToNull(request.getClientName());
+    String clientEmail = blankToNull(request.getClientEmail());
+    String clientPhone = blankToNull(request.getClientPhone());
+    boolean forClient = clientName != null || clientEmail != null || clientPhone != null;
+    if (forClient && clientName == null) {
+      throw new InvalidAppointmentException("Para cargar el turno a nombre de un cliente falta su nombre.");
+    }
+
+    Appointment appointment = Appointment.builder()
+        .startDatetime(start)
+        .endDatetime(end)
+        .status(forClient ? AppointmentStatus.BOOKED : AppointmentStatus.UNBOOKED)
+        .clientName(clientName)
+        .clientEmail(clientEmail)
+        .clientPhone(clientPhone)
+        .reservedAt(forClient ? LocalDateTime.now() : null)
+        .price(service.getPrice())
+        .business(business)
+        .service(service)
+        .employee(employee)
+        .manual(true)
+        .build();
+
+    return AppointmentMapper.toResponse(appointmentRepository.save(appointment));
+  }
+
+  // trims a text and turns it into null if nothing is left: "  " gives null and " Ana " gives "Ana"
+  private String blankToNull(String value) {
+    if (value == null) return null;
+    String trimmed = value.trim();
+    return trimmed.isEmpty() ? null : trimmed;
+  }
 
   // BOOK APPOINTMENT | /book
   // uses pessimistic lock to avoid double booking on concurrent requests
 
-  @Transactional
-  public AppointmentResponse bookAppointment(Long appointmentId, BookAppointmentRequest request) {
+  // READ_COMMITTED so the unpaid-booking check below sees what another request committed while this
+  // one was waiting for the client lock (with the default REPEATABLE READ it kept reading the snapshot
+  // taken before the wait, and parallel requests all passed the check)
+  @Transactional(isolation = Isolation.READ_COMMITTED)
+public AppointmentResponse bookAppointment(UUID publicId, BookAppointmentRequest request, Authentication authentication) {
 
-    // fetch appointment with lock: blocks the row until the transaction ends
+    // step 1: resolve the UUID to the internal id only. loading the whole entity here made step 2 return
+    // that same cached instance, so a request that waited for the lock still saw the slot as free and
+    // only the unique constraint of the deposit stopped it
+    Long appointmentId = appointmentRepository.findIdByPublicId(publicId)
+        .orElseThrow(() -> new NotFoundException("Error al reservar: turno no encontrado."));
+
+    // step 2: fetch with a pessimistic lock, so concurrent requests read it one after the other
     Appointment appointment = appointmentRepository.findByIdWithLock(appointmentId)
-        .orElseThrow(() -> new NotFoundException("Appointment not found"));
+        .orElseThrow(() -> new NotFoundException("Error al reservar: turno no encontrado."));
 
-    // cjeck if slot is still available
+    // check if slot is still available
     if (appointment.getStatus() != AppointmentStatus.UNBOOKED) {
-      throw new AppointmentNotAvailableException(
-          "Appointment is no longer available. Current status: " + appointment.getStatus());
+        throw new AppointmentNotAvailableException("El turno ya no está disponible.");
     }
 
-    // load the registered client if id was provided
+    // the public list hides past slots, but an old link or a direct call could still book one
+    if (!appointment.getStartDatetime().isAfter(LocalDateTime.now())) {
+        throw new AppointmentNotAvailableException("El turno ya pasó.");
+    }
+
+    // check if business is active
+    if (Boolean.TRUE.equals(appointment.getBusiness().getDeleted())) {
+      throw new NotFoundException("El negocio no está disponible.");
+    }
+
+    // the business can ask for a minimum notice: with 2 hours, at 15:00 the 16:00 slot can't be booked.
+    // same 409 as a slot that isn't available, since the public list doesn't show it anymore either.
+    // appointments the owner adds by hand go through createAppointment and don't have this rule
+    int minBookingNoticeHours = minBookingNoticeHours(appointment.getBusiness());
+    if (minBookingNoticeHours > 0
+            && !appointment.getStartDatetime().isAfter(LocalDateTime.now().plusHours(minBookingNoticeHours))) {
+        throw new AppointmentNotAvailableException("El turno ya no está disponible: este negocio pide reservar con al menos "
+                + (minBookingNoticeHours == 1 ? "1 hora" : minBookingNoticeHours + " horas") + " de anticipación.");
+    }
+
+    // validate that appointment has price and service set
+    if (appointment.getPrice() == null || appointment.getPrice().compareTo(BigDecimal.ZERO) <= 0) {
+        throw new InvalidPriceException("Error al reservar: El precio del turno es inválido.");
+    }
+
+    if (appointment.getService() == null) {
+        throw new NoServiceException("Error al reservar: El turno no tiene un servicio asociado.");
+    }
+
+    // a deleted service can still have free slots left from before (for example one that kept its
+    // deposit row after an expired reservation), so check it here too
+    if (Boolean.TRUE.equals(appointment.getService().getDeleted())) {
+        throw new AppointmentNotAvailableException("El servicio de este turno ya no está disponible.");
+    }
+
     User clientUser = null;
-    if (request.getClientUserId() != null) {
-      clientUser = userRepository.findById(request.getClientUserId())
-          .orElseThrow(() -> new NotFoundException("Client user not found"));
+    if (authentication != null && authentication.isAuthenticated()) {
+        clientUser = userRepository.findByEmail(authentication.getName())
+                .orElseThrow(() -> new NotFoundException("Usuario no encontrado."));
+        appointment.setClientName(clientUser.getName());
+        appointment.setClientEmail(clientUser.getEmail());
+        appointment.setClientPhone(request.getClientPhone());
+    } else {
+        // blank counts as missing: "   " as name or "" as email left the business without a way to
+        // reach the client
+        if (request.getClientName() == null || request.getClientName().isBlank()
+                || request.getClientEmail() == null || request.getClientEmail().isBlank()) {
+            throw new IllegalArgumentException("Ingresa tu nombre y email para reservar el turno.");
+        }
+        // with the email of an account the booking wasn't linked to it: its owner didn't see it in
+        // "Mis turnos" and couldn't cancel it. that person has to sign in to book with that email
+        if (userRepository.existsByEmail(request.getClientEmail())) {
+            throw new AppointmentConflictException("Ese email pertenece a una cuenta. Iniciá sesión para reservar con él.");
+        }
+        appointment.setClientName(request.getClientName());
+        appointment.setClientEmail(request.getClientEmail());
+        appointment.setClientPhone(request.getClientPhone());
+    }
+    appointment.setClientUser(clientUser);
+
+    // check for overlapping appointments
+    if (clientUser != null && appointmentRepository.hasOverlappingAppointment(
+            clientUser.getId(), appointment.getStartDatetime(), appointment.getEndDatetime())) {
+        throw new AppointmentConflictException("Ya tenés un turno reservado en este horario.");
     }
 
-    // set appointment's client data
-    appointment.setClientName(request.getClientName());
-    appointment.setClientEmail(request.getClientEmail());
-    appointment.setClientPhone(request.getClientPhone());
-    appointment.setClientUser(clientUser);
-    appointment.setStatus(AppointmentStatus.AWAITING_PAYMENT);
+    // anti-spam: no se puede reservar si ya tenés un turno pendiente de pago.
+    // the slot lock doesn't serialize two bookings of the same client on different slots, so the client
+    // row is locked too: a second request waits here until the first one commits, and then sees it
+  if (clientUser != null) {
+    userRepository.findByIdWithLock(clientUser.getId());
+    if (appointmentRepository.hasUnpaidByUser(clientUser.getId())) {
+        throw new AppointmentConflictException("Ya tenés un turno pendiente de pago. Completalo antes de reservar otro.");
+    }
+  } else {
+    if (appointmentRepository.hasUnpaidByEmail(request.getClientEmail())) {
+        throw new AppointmentConflictException("Ya tenés un turno pendiente de pago. Completalo antes de reservar otro.");
+    }
+  }
+
+    appointment.setReservedAt(LocalDateTime.now());
+
+    // null or out of range percentage: default deposit is set to 30%.
+    // 0% is a real choice of the business (no deposit), so it is kept as 0
+    BigDecimal depositPercentage = appointment.getService().getDepositPorcentage();
+    if (depositPercentage == null
+            || depositPercentage.compareTo(BigDecimal.ZERO) < 0
+            || depositPercentage.compareTo(new BigDecimal("100")) > 0) {
+        depositPercentage = new BigDecimal("30.00");
+    }
+    boolean noDeposit = depositPercentage.compareTo(BigDecimal.ZERO) == 0;
+
+    // without deposit there is nothing to pay: the booking is confirmed right away and the deposit
+    // row stays as a $0 deposit already paid, so cancel and suspend keep working the same way
+    appointment.setStatus(noDeposit ? AppointmentStatus.BOOKED : AppointmentStatus.AWAITING_PAYMENT);
+    DepositStatus depositStatus = noDeposit ? DepositStatus.PAID : DepositStatus.PENDING;
+    LocalDateTime paidAt = noDeposit ? LocalDateTime.now() : null;
 
     // calculate deposit amount: price * percentage / 100
-    BigDecimal depositPercentage = appointment.getService().getDepositPorcentage();
-    if (depositPercentage == null) {
-      depositPercentage = new BigDecimal("30.00");
-    }
     BigDecimal depositAmount = appointment.getPrice()
-        .multiply(depositPercentage)
-        .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
+            .multiply(depositPercentage)
+            .divide(new BigDecimal("100"), 2, RoundingMode.HALF_UP);
 
-    // create deposit with pending status
-    Deposit deposit = Deposit.builder()
-        .appointment(appointment)
-        .amount(depositAmount)
-        .status(DepositStatus.PENDING)
-        .build();
+    // the deposit keeps the cancellation policy in force right now, so a later change by the owner
+    // doesn't apply to this booking
+    Integer cancellationNoticeHours = appointment.getBusiness().getCancellationNoticeHours() != null
+            ? appointment.getBusiness().getCancellationNoticeHours()
+            : Business.DEFAULT_CANCELLATION_NOTICE_HOURS;
+
+    // reuse existing deposit if slot was previously cancelled, otherwise create new
+    Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
+            .map(existing -> {
+                existing.setAmount(depositAmount);
+                existing.setStatus(depositStatus);
+                existing.setPaidAt(paidAt);
+                existing.setCancellationNoticeHours(cancellationNoticeHours);
+                return existing;
+            })
+            .orElseGet(() -> Deposit.builder()
+                    .appointment(appointment)
+                    .amount(depositAmount)
+                    .status(depositStatus)
+                    .paidAt(paidAt)
+                    .cancellationNoticeHours(cancellationNoticeHours)
+                    .build());
 
     appointmentRepository.save(appointment);
     depositRepository.save(deposit);
 
-    // link deposit to appointment so it shows up in the response and can be deleted
-    // (cascade remove in appointment.deposit)
     appointment.setDeposit(deposit);
 
     return AppointmentMapper.toResponse(appointment);
-  }
+}
 
   // CONFIRM DEPOSIT PAYMENT | /pay-deposit
 
   @Transactional
-  public AppointmentResponse confirmDepositPayment(Long appointmentId) {
+  public AppointmentResponse confirmDepositPayment(UUID publicId) {
 
-    Appointment appointment = appointmentRepository.findById(appointmentId)
-        .orElseThrow(() -> new NotFoundException("Appointment not found"));
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
+        .orElseThrow(() -> new NotFoundException("Error al confirmar el pago: turno no encontrado."));
 
     // Payment is only allowed when the appointment is waiting for it
     if (appointment.getStatus() != AppointmentStatus.AWAITING_PAYMENT) {
       throw new InvalidStatusException(
-          "Appointment is not in AWAITING_PAYMENT status. Current status: " + appointment.getStatus());
+          "Error al confirmar el pago: el turno no está esperando un pago.");
     }
 
-    Deposit deposit = depositRepository.findByAppointmentId(appointmentId)
-        .orElseThrow(() -> new NotFoundException("Deposit not found for this appointment"));
+    Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
+        .orElseThrow(() -> new NotFoundException("Error al confirmar el pago: seña no encontrada para este turno"));
 
     if (deposit.getStatus() != DepositStatus.PENDING) {
       throw new InvalidStatusException(
-          "Deposit is not in PENDING status. Current status: " + deposit.getStatus());
+          "Error al confirmar el pago: la seña no está en estado pendiente.");
     }
 
     // confirm payment: appointment status = BOOKED
@@ -177,32 +455,62 @@ public class AppointmentService {
     return AppointmentMapper.toResponse(appointment);
   }
 
-  // CANCEL APPOINTMENT (requested by client user) | /cancel
-  // >= 24hs till appt makes deposit REFUNDED | < 24hs till appt makes deposit
-  // FORFEITED
+  // (requested by client user)
+  // CANCEL APPOINTMENT | /cancel
+  // >= the deposit's cancellation notice hours till appt makes deposit REFUNDED | less makes it
+  // FORFEITED. it uses the hours copied to the deposit when it was booked, not the business's current ones
 
   @Transactional
-  public AppointmentResponse cancelAppointment(Long appointmentId) {
+  public AppointmentResponse cancelAppointment(UUID publicId, User currentUser) {
 
-    Appointment appointment = appointmentRepository.findById(appointmentId)
-        .orElseThrow(() -> new NotFoundException("Appointment not found"));
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
+        .orElseThrow(() -> new NotFoundException("Error al cancelar el turno: turno no encontrado."));
+
+    // only the client who booked it can cancel; the owner suspends or deletes instead
+    if (appointment.getClientUser() == null || !appointment.getClientUser().getId().equals(currentUser.getId())) {
+      throw new ForbiddenOperationException("No tenés permiso para cancelar este turno");
+    }
+
+    // once it started it was attended (or missed): cancelling it would take it out of the revenue
+    if (!appointment.getStartDatetime().isAfter(LocalDateTime.now())) {
+      throw new InvalidStatusException("No se puede cancelar un turno que ya empezó.");
+    }
 
     // only BOOKED or AWAITING_PAYMENT appointments can be cancelled
     if (appointment.getStatus() != AppointmentStatus.BOOKED
         && appointment.getStatus() != AppointmentStatus.AWAITING_PAYMENT) {
       throw new InvalidStatusException(
-          "Appointment cannot be cancelled. Current status: " + appointment.getStatus());
+          "Error al cancelar el turno: el turno no puede ser cancelado en su estado actual.");
     }
 
-    Deposit deposit = depositRepository.findByAppointmentId(appointmentId)
-        .orElseThrow(() -> new NotFoundException("Deposit not found for this appointment"));
+    Deposit deposit = depositRepository.findByAppointmentId(appointment.getId())
+        .orElseThrow(() -> new NotFoundException("Error al cancelar el turno: seña no encontrada para este turno"));
 
     // calculate hours remaining until appointment start
     long hoursUntilAppointment = ChronoUnit.HOURS.between(
         LocalDateTime.now(),
         appointment.getStartDatetime());
 
-    if (hoursUntilAppointment >= 24) {
+    // if still awaiting payment, just release the slot — no need to cancel
+    if (appointment.getStatus() == AppointmentStatus.AWAITING_PAYMENT) {
+      appointment.setStatus(AppointmentStatus.UNBOOKED);
+      appointment.setClientName(null);
+      appointment.setClientEmail(null);
+      appointment.setClientPhone(null);
+      appointment.setClientUser(null);
+      appointment.setReservedAt(null);
+      deposit.setStatus(DepositStatus.CANCELED);
+      depositRepository.save(deposit);
+      appointmentRepository.save(appointment);
+      appointment.setDeposit(deposit);
+      return AppointmentMapper.toResponse(appointment);
+    }
+
+    int cancellationNoticeHours = deposit.getCancellationNoticeHours() != null
+        ? deposit.getCancellationNoticeHours()
+        : Business.DEFAULT_CANCELLATION_NOTICE_HOURS;
+
+    if (hoursUntilAppointment >= cancellationNoticeHours) {
       // early cancelation: deposit is returned to the client
       deposit.setStatus(DepositStatus.REFUNDED);
     } else {
@@ -219,49 +527,90 @@ public class AppointmentService {
     return AppointmentMapper.toResponse(appointment);
   }
 
+  // GET APPOINTMENT | /appointments/{id} (public)
+  // the payment link (/reserva/:id) is opened without a session, even on another device, so anyone with
+  // the id can read the appointment. the client contact data only goes to the client who booked it,
+  // the business owner or an admin; everyone else gets it as null.
+  @Transactional(readOnly = true)
+  public AppointmentResponse getAppointment(UUID publicId, User currentUser) {
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
+        .orElseThrow(() -> new NotFoundException("Turno no encontrado"));
+
+    AppointmentResponse response = AppointmentMapper.toResponse(appointment);
+    if (!canSeeClientData(appointment, currentUser)) {
+      response.setClientName(null);
+      response.setClientEmail(null);
+      response.setClientPhone(null);
+    }
+    return response;
+  }
+
+  private boolean canSeeClientData(Appointment appointment, User currentUser) {
+    if (currentUser == null)
+      return false;
+    boolean isClient = appointment.getClientUser() != null
+        && appointment.getClientUser().getId().equals(currentUser.getId());
+    boolean isOwner = appointment.getBusiness().getOwner() != null
+        && appointment.getBusiness().getOwner().getId().equals(currentUser.getId());
+    boolean isAdmin = currentUser.getRoles().stream().anyMatch(role -> role.getName() == RoleName.ADMIN);
+    return isClient || isOwner || isAdmin;
+  }
+
+  // (requested by business owner)
   // SUSPEND APPOINTMENT | /suspend
   // business owner cancells booked appt: deposit is always refunded
 
   @Transactional
-  public AppointmentResponse suspendAppointment(Long appointmentId) {
+  public AppointmentResponse suspendAppointment(UUID publicId) {
 
-    Appointment appointment = appointmentRepository.findById(appointmentId)
-        .orElseThrow(() -> new NotFoundException("Appointment not found"));
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
+        .orElseThrow(() -> new NotFoundException("Error al suspender el turno: turno no encontrado."));
+    businessAccessGuard.checkCanManage(appointment.getBusiness());
 
     if (appointment.getStatus() != AppointmentStatus.BOOKED) {
       throw new InvalidStatusException(
-          "Only BOOKED appointments can be suspended. current status: " + appointment.getStatus());
+          "Error al suspender el turno: solo los turnos reservados pueden ser suspendidos.");
     }
 
-    Deposit deposit = depositRepository.findByAppointmentId(appointmentId)
-        .orElseThrow(() -> new NotFoundException("Deposit not found for this appointment"));
+    if (!appointment.getStartDatetime().isAfter(LocalDateTime.now())) {
+      throw new InvalidStatusException("No se puede suspender un turno que ya empezó.");
+    }
 
-    deposit.setStatus(DepositStatus.REFUNDED);
+    // an appointment the owner booked by hand for a client (from the agenda) has no deposit, so
+    // there's nothing to refund and it just gets suspended. before this it answered 404
+    depositRepository.findByAppointmentId(appointment.getId()).ifPresent(deposit -> {
+      deposit.setStatus(DepositStatus.REFUNDED);
+      depositRepository.save(deposit);
+      appointment.setDeposit(deposit);
+    });
+
     appointment.setStatus(AppointmentStatus.SUSPENDED);
-
-    depositRepository.save(deposit);
     appointmentRepository.save(appointment);
-    appointment.setDeposit(deposit);
 
     return AppointmentMapper.toResponse(appointment);
   }
 
+  // (requested by business owner)
   // DELETE APPOINTMENT
   // IMPORTANT || only UNBOOKED appts with no deposit can be deleted
 
   @Transactional
-  public void deleteAppointment(Long appointmentId) {
+  public void deleteAppointment(UUID publicId) {
 
-    Appointment appointment = appointmentRepository.findById(appointmentId)
-        .orElseThrow(() -> new NotFoundException("Appointment not found"));
+    Appointment appointment = appointmentRepository.findByPublicId(publicId)
+        .orElseThrow(() -> new NotFoundException("Error al eliminar el turno: turno no encontrado."));
+    businessAccessGuard.checkCanManage(appointment.getBusiness());
 
     // check status so only unbooked appts are able to be hard deleted
     if (appointment.getStatus() != AppointmentStatus.UNBOOKED) {
       throw new InvalidStatusException(
-          "Only UNBOOKED appointments can be deleted. " +
-              "Use cancel or suspend for booked appointments.");
+          "Error al eliminar el turno: solo los turnos sin reservar pueden ser eliminados.");
     }
 
+    // a free slot can keep the CANCELED deposit of a reservation that was cancelled or expired.
+    // that row points to the appointment, so it goes first (before, the delete failed with a 500)
+    depositRepository.findByAppointmentId(appointment.getId()).ifPresent(depositRepository::delete);
+    appointment.setDeposit(null);
     appointmentRepository.delete(appointment);
   }
 }

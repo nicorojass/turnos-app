@@ -1,11 +1,17 @@
 package com.grupo8.turnos_app.modules.appointment.controller;
 
+import java.time.Instant;
+import java.time.LocalDate;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.web.PageableDefault;
+import org.springframework.format.annotation.DateTimeFormat;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -20,9 +26,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.modules.appointment.dto.AppointmentResponse;
 import com.grupo8.turnos_app.modules.appointment.dto.BookAppointmentRequest;
+import com.grupo8.turnos_app.modules.appointment.dto.CreateAppointmentRequest;
 import com.grupo8.turnos_app.modules.appointment.service.AppointmentService;
+import com.grupo8.turnos_app.modules.appointment.service.GuestBookingLimiter;
 import com.grupo8.turnos_app.modules.users.entities.User;
 
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
@@ -32,18 +41,30 @@ import lombok.RequiredArgsConstructor;
 public class AppointmentController {
 
     private final AppointmentService appointmentService;
+    private final GuestBookingLimiter guestBookingLimiter;
 
     // ---------- OWNER ENDPOINTS ------------
 
+    // POST /businesses/{id}/appointments - OWNER
+    // one appointment on a specific day and time, free or already booked for a client.
+    // answers 201 with the created appointment
+    @PostMapping("/businesses/{businessId}/appointments")
+    public ResponseEntity<AppointmentResponse> createAppointment(
+            @PathVariable UUID businessId,
+            @RequestBody @Valid CreateAppointmentRequest request) {
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(appointmentService.createAppointment(businessId, request));
+    }
+
     // PUT /appointments/{id}/suspend - OWNER
     @PutMapping("/appointments/{id}/suspend")
-    public ResponseEntity<AppointmentResponse> suspendAppointment(@PathVariable Long id) {
+    public ResponseEntity<AppointmentResponse> suspendAppointment(@PathVariable UUID id) {
         return ResponseEntity.ok(appointmentService.suspendAppointment(id));
     }
 
     // DELETE /appointments/{id} - OWNER
     @DeleteMapping("/appointments/{id}")
-    public ResponseEntity<Void> deleteAppointment(@PathVariable Long id) {
+    public ResponseEntity<Void> deleteAppointment(@PathVariable UUID id) {
         appointmentService.deleteAppointment(id);
         return ResponseEntity.noContent().build();
     }
@@ -51,7 +72,7 @@ public class AppointmentController {
     // GET /businesses/{id}/appointments - OWNER
     @GetMapping("/businesses/{businessId}/appointments")
     public ResponseEntity<Page<AppointmentResponse>> getAppointments(
-            @PathVariable Long businessId,
+            @PathVariable UUID businessId,
             @RequestParam(required = false) AppointmentStatus status,
             @PageableDefault(size = 20) Pageable pageable) {
         return ResponseEntity.ok(
@@ -61,24 +82,34 @@ public class AppointmentController {
     // GET /businesses/{id}/appointments/today - OWNER
     @GetMapping("/businesses/{businessId}/appointments/today")
     public ResponseEntity<List<AppointmentResponse>> getTodayAppointments(
-            @PathVariable Long businessId) {
+            @PathVariable UUID businessId) {
         return ResponseEntity.ok(appointmentService.getTodayAppointments(businessId));
     }
 
     // ------------ PUBLIC / ALL-ROLE ENDPOINTS ----------
 
-    // PUT /appointments/{id}/cancel - OWNER / EMPLOYEE / CLIENT
+    // PUT /appointments/{id}/cancel - CLIENT who booked it
     @PutMapping("/appointments/{id}/cancel")
-    public ResponseEntity<AppointmentResponse> cancelAppointment(@PathVariable Long id) {
-        return ResponseEntity.ok(appointmentService.cancelAppointment(id));
+    public ResponseEntity<AppointmentResponse> cancelAppointment(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User authenticatedUser) {
+        return ResponseEntity.ok(appointmentService.cancelAppointment(id, authenticatedUser));
+    }
+
+    // GET /appointments/{id} - PUBLIC (client data only for the client, the owner or an admin)
+    @GetMapping("/appointments/{id}")
+    public ResponseEntity<AppointmentResponse> getAppointment(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal User authenticatedUser) {
+        return ResponseEntity.ok(appointmentService.getAppointment(id, authenticatedUser));
     }
 
     // GET /businesses/{id}/appointments/public - PUBLIC
     @GetMapping("/businesses/{businessId}/appointments/public")
     public ResponseEntity<List<AppointmentResponse>> getAvailableSlots(
-            @PathVariable Long businessId,
-            @RequestParam(required = false) Long serviceId,
-            @RequestParam(required = false) Long employeeId) {
+            @PathVariable UUID businessId,
+            @RequestParam(required = false) UUID serviceId,
+            @RequestParam(required = false) UUID employeeId) {
         return ResponseEntity.ok(
                 appointmentService.getAvailableSlots(businessId, serviceId, employeeId));
     }
@@ -86,15 +117,43 @@ public class AppointmentController {
     // POST /appointments/{id}/book - PUBLIC
     @PostMapping("/appointments/{id}/book")
     public ResponseEntity<AppointmentResponse> bookAppointment(
-            @PathVariable Long id,
-            @RequestBody @Valid BookAppointmentRequest request) {
-        return ResponseEntity.ok(appointmentService.bookAppointment(id, request));
+            @PathVariable UUID id,
+            @RequestBody @Valid BookAppointmentRequest request,
+            Authentication authentication,
+            HttpServletRequest httpRequest) {
+        // guests are limited per ip; logged clients already can't hold more than one unpaid booking
+        boolean guest = authentication == null;
+        String ip = httpRequest.getRemoteAddr();
+        Instant place = guest ? guestBookingLimiter.acquire(ip) : null;
+        try {
+            return ResponseEntity.ok(appointmentService.bookAppointment(id, request, authentication));
+        } catch (RuntimeException e) {
+            // a failed booking doesn't count against the limit
+            if (place != null)
+                guestBookingLimiter.release(ip, place);
+            throw e;
+        }
     }
 
     // POST /appointments/{id}/pay-deposit - PUBLIC
     @PostMapping("/appointments/{id}/pay-deposit")
-    public ResponseEntity<AppointmentResponse> confirmDepositPayment(@PathVariable Long id) {
+    public ResponseEntity<AppointmentResponse> confirmDepositPayment(@PathVariable UUID id) {
         return ResponseEntity.ok(appointmentService.confirmDepositPayment(id));
+    }
+
+    // GET /employees/me/appointments - EMPLOYEE
+    // the appointments assigned to the logged employee, from any status. dateFrom and dateTo are
+    // optional and both inclusive, so dateFrom=2026-11-13&dateTo=2026-11-13 is just that day.
+    // pageable like the owner list, oldest first unless the front sends another sort
+    @GetMapping("/employees/me/appointments")
+    public ResponseEntity<Page<AppointmentResponse>> getEmployeeAppointments(
+            @RequestParam(required = false) AppointmentStatus status,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFrom,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateTo,
+            @PageableDefault(size = 20, sort = "startDatetime") Pageable pageable,
+            @AuthenticationPrincipal User authenticatedUser) {
+        return ResponseEntity.ok(appointmentService.getEmployeeAppointments(
+                authenticatedUser, status, dateFrom, dateTo, pageable));
     }
 
     // GET /users/me/appointments - CLIENT

@@ -7,9 +7,24 @@ spring.jpa.hibernate.ddl-auto=update
 spring.jpa.show-sql=true
 spring.jpa.properties.hibernate.format_sql=true
 
+# api docs (/swagger-ui and /v3/api-docs) are public: set both to false in production
+springdoc.api-docs.enabled=true
+springdoc.swagger-ui.enabled=true
+
 jwt.secret=
 jwt.expiration=
 
 app.admin.email=
 app.admin.password=
 app.admin.name=
+
+# frontend origins allowed to call the api (comma separated). defaults to http://localhost:4200
+app.cors.allowed-origins=http://localhost:4200
+# guest bookings allowed per ip inside the window an unpaid booking is held. defaults: 3 per 30 minutes
+app.booking.guest-max-per-ip=3
+app.booking.guest-window-minutes=30
+
+# failed logins allowed inside the window, per email from one ip and per ip. defaults: 5 and 20 per 15 minutes
+app.login.max-failures-per-email=5
+app.login.max-failures-per-ip=20
+app.login.window-minutes=15

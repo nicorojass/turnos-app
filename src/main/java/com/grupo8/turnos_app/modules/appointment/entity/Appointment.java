@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.appointment.entity;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.modules.business.entities.Business;
@@ -9,8 +10,24 @@ import com.grupo8.turnos_app.modules.deposit.entity.Deposit;
 import com.grupo8.turnos_app.modules.service.entity.Serv;
 import com.grupo8.turnos_app.modules.users.entities.User;
 
-import jakarta.persistence.*;
-import lombok.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.GeneratedValue;
+import jakarta.persistence.GenerationType;
+import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OneToOne;
+import jakarta.persistence.PrePersist;
+import jakarta.persistence.Table;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 
 @Entity
 @Table(name = "appointments")
@@ -24,6 +41,9 @@ public class Appointment {
   @GeneratedValue(strategy = GenerationType.IDENTITY)
   private Long id;
 
+  @Column(nullable = false, unique = true, updatable = false)
+  private UUID publicId;
+
   @Column(name = "start_datetime", nullable = false)
   private LocalDateTime startDatetime;
 
@@ -31,35 +51,53 @@ public class Appointment {
   private LocalDateTime endDatetime;
 
   @Enumerated(EnumType.STRING)
-  @Column(nullable = false)
+  @Column(nullable = false, length = 20)
   private AppointmentStatus status;
 
   // client data if who books the appointment isnt registered
-  @Column(name = "client_name")
+  @Column(name = "client_name", length = 100)
   private String clientName;
 
-  @Column(name = "client_email")
+  @Column(name = "client_email", length = 255)
   private String clientEmail;
 
-  @Column(name = "client_phone")
+  @Column(name = "client_phone", length = 20)
   private String clientPhone;
 
   // service's price at booking moment, so it stays protected from price
   // variations on service
-  @Column(nullable = false)
+  @Column(nullable = false, precision = 12, scale = 2)
   private BigDecimal price;
 
   // appointment creation timestapm
   @Column(name = "created_at")
   private LocalDateTime createdAt;
 
+  // timestamp of when the appointment was booked, used to calculate payment
+  @Column(name = "reserved_at")
+  private LocalDateTime reservedAt;
+
+  // true when the owner created it by hand from the agenda in the panel, false when the
+  // generator made it from the weekly template. the agenda regeneration only wipes the
+  // generated free slots, so a free slot the owner added for one specific day (say an extra
+  // saturday at 10:00) survives when the template changes.
+  // the column default is there so the rows that already exist end up as false when
+  // hibernate adds the column
+  @Column(nullable = false, columnDefinition = "boolean default false")
+  private Boolean manual;
+
   // asign default values to timestamp and appt status, instead of doing it in
   // service
   @PrePersist
   protected void onCreate() {
     this.createdAt = LocalDateTime.now();
+    this.publicId = UUID.randomUUID();
     if (this.status == null) {
       this.status = AppointmentStatus.UNBOOKED;
+    }
+    // the generator builds appointments without touching this field, so null means generated
+    if (this.manual == null) {
+      this.manual = false;
     }
   }
 
@@ -82,8 +120,6 @@ public class Appointment {
   @JoinColumn(name = "client_user_id")
   private User clientUser;
 
-  @OneToOne(mappedBy = "appointment", cascade = CascadeType.REMOVE, fetch = FetchType.LAZY)
-  // cascade added only for delete appointment function, so associated deposit
-  // also deletes
+  @OneToOne(mappedBy = "appointment", fetch = FetchType.LAZY)
   private Deposit deposit;
 }

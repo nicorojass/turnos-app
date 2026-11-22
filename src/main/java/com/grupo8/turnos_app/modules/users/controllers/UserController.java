@@ -1,8 +1,10 @@
 package com.grupo8.turnos_app.modules.users.controllers;
 
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -13,6 +15,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.grupo8.turnos_app.modules.users.dto.RoleUpdateRequest;
 import com.grupo8.turnos_app.modules.users.dto.UserResponse;
+import com.grupo8.turnos_app.modules.users.entities.User;
 import com.grupo8.turnos_app.modules.users.services.UserService;
 
 import jakarta.validation.Valid;
@@ -31,17 +34,18 @@ public class UserController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<UserResponse> getUserById(@PathVariable Long id) {
+    public ResponseEntity<UserResponse> getUserById(@PathVariable UUID id) {
         return ResponseEntity.ok(userService.getUserById(id));
     }
 
     @PatchMapping("/{id}/roles")
-    public ResponseEntity<UserResponse> updateUserRoles(@PathVariable Long id, @RequestBody @Valid RoleUpdateRequest request) {
-        return ResponseEntity.ok(userService.updateUserRoles(id, request.getRoles()));
+    public ResponseEntity<UserResponse> updateUserRoles(@PathVariable UUID id, @RequestBody @Valid RoleUpdateRequest request,
+            @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(userService.updateUserRoles(id, request.getRoles(), currentUser));
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<UserResponse> toggleUserActive(@PathVariable Long id) {
-        return ResponseEntity.ok(userService.toggleUserActive(id));
+    public ResponseEntity<UserResponse> toggleUserActive(@PathVariable UUID id, @AuthenticationPrincipal User currentUser) {
+        return ResponseEntity.ok(userService.toggleUserActive(id, currentUser));
 }
 }

@@ -1,5 +1,7 @@
 package com.grupo8.turnos_app.modules.business.entities;
 
+import java.util.UUID;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -25,13 +27,17 @@ public class BusinessType {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
     @Column(nullable = false, unique = true)
     private String name;
 
-    private Boolean active;
+    private Boolean deleted;
 
     @PrePersist
     protected void OnCreate() {
-        active = true;
+        this.deleted = false;
+        this.publicId = UUID.randomUUID();
     }
 }

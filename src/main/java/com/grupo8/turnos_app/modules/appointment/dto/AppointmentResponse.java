@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.appointment.dto;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.common.enums.AppointmentStatus;
 import com.grupo8.turnos_app.modules.deposit.dto.DepositResponse;
@@ -14,7 +15,7 @@ import lombok.*;
 @AllArgsConstructor
 @Builder
 public class AppointmentResponse {
-    private Long id;
+    private UUID id;
     private LocalDateTime startDatetime;
     private LocalDateTime endDatetime;
     private AppointmentStatus status;
@@ -22,12 +23,15 @@ public class AppointmentResponse {
     private String clientEmail;
     private String clientPhone;
     private BigDecimal price;
-    private Long businessId;
-    private Long serviceId;
+    private UUID businessId;
+    private String businessName;
+    private String businessSlug;
+    private UUID serviceId;
     private String serviceName;
-    private Long employeeId;
+    private UUID employeeId;
     private String employeeName;
     private LocalDateTime createdAt;
-    // can be null: its gonna be included when it exists
+    // only while AWAITING_PAYMENT: when the unpaid booking is released, in server time
+    private LocalDateTime expiresAt;
     private DepositResponse deposit;
 }

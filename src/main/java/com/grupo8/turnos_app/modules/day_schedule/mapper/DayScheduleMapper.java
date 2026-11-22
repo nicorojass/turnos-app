@@ -7,13 +7,13 @@ public class DayScheduleMapper {
   
   public static DayScheduleResponse toResponse(DaySchedule daySchedule) {
     return DayScheduleResponse.builder()
-        .id(daySchedule.getId())
+        .id(daySchedule.getPublicId())
         .day(daySchedule.getDay())
         .dayStart(daySchedule.getDayStart())
         .dayEnd(daySchedule.getDayEnd())
         .appointmentDuration(daySchedule.getAppointmentDuration())
         .enabled(daySchedule.getEnabled())
-        .businessId(daySchedule.getBusiness().getId())
+        .businessId(daySchedule.getBusiness().getPublicId())
         .build();
   }
 }

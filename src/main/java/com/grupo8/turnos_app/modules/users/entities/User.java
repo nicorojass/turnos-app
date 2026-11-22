@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 import org.springframework.security.core.GrantedAuthority;
@@ -42,6 +43,9 @@ public class User implements UserDetails {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
     @Column(nullable = false)
     private String name;
 
@@ -59,6 +63,7 @@ public class User implements UserDetails {
     protected void onCreate() {
         createdAt = LocalDateTime.now();
         active = true;
+        this.publicId = UUID.randomUUID();
     }
 
     @OneToOne(mappedBy = "owner", fetch = FetchType.LAZY)

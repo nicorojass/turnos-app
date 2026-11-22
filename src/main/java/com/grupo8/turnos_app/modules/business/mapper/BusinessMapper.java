@@ -11,7 +11,7 @@ public class BusinessMapper {
 
     public static BusinessResponse toResponse(Business business) {
         return BusinessResponse.builder()
-                .id(business.getId())
+                .id(business.getPublicId())
                 .name(business.getName())
                 .email(business.getEmail())
                 .slug(business.getSlug())
@@ -21,8 +21,12 @@ public class BusinessMapper {
                 .scheduleEnd(business.getScheduleEnd())
                 .scheduleDaysToCreate(business.getScheduleDaysToCreate())
                 .scheduleAnticipation(business.getScheduleAnticipation())
-                .active(business.getActive())
-                .ownerId(business.getOwner().getId())
+                .cancellationNoticeHours(business.getCancellationNoticeHours())
+                .minBookingNoticeHours(business.getMinBookingNoticeHours() != null
+                        ? business.getMinBookingNoticeHours()
+                        : Business.DEFAULT_MIN_BOOKING_NOTICE_HOURS)
+                .deleted(business.getDeleted())
+                .ownerId(business.getOwner().getPublicId())
                 .businessTypes(
                     business.getBusinessTypes() == null ? Collections.emptyList() :
                     business.getBusinessTypes().stream()
@@ -33,16 +37,29 @@ public class BusinessMapper {
     }
 
     public static Business toEntity(BusinessRequest request) {
-        return Business.builder()
+        Business business = Business.builder()
                 .name(request.getName())
                 .email(request.getEmail())
                 .slug(request.getSlug())
                 .phone(request.getPhone())
                 .description(request.getDescription())
-                .automaticSchedule(request.getAutomaticSchedule())
                 .scheduleEnd(request.getScheduleEnd())
-                .scheduleDaysToCreate(request.getScheduleDaysToCreate())
-                .scheduleAnticipation(request.getScheduleAnticipation())
                 .build();
+
+        // the builder defaults (agenda off, 30 days, 5 days of anticipation, 24 hours to cancel, 0 hours
+        // to book) are only kept when the request leaves these fields out; passing null to the builder
+        // would overwrite them
+        if (request.getAutomaticSchedule() != null)
+            business.setAutomaticSchedule(request.getAutomaticSchedule());
+        if (request.getScheduleDaysToCreate() != null)
+            business.setScheduleDaysToCreate(request.getScheduleDaysToCreate());
+        if (request.getScheduleAnticipation() != null)
+            business.setScheduleAnticipation(request.getScheduleAnticipation());
+        if (request.getCancellationNoticeHours() != null)
+            business.setCancellationNoticeHours(request.getCancellationNoticeHours());
+        if (request.getMinBookingNoticeHours() != null)
+            business.setMinBookingNoticeHours(request.getMinBookingNoticeHours());
+
+        return business;
     }
 }

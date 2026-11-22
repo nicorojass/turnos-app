@@ -3,6 +3,8 @@ package com.grupo8.turnos_app.modules.business.entities;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
+import java.util.UUID;
 
 import com.grupo8.turnos_app.modules.users.entities.User;
 
@@ -18,6 +20,8 @@ import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -32,37 +36,66 @@ import lombok.Setter;
 @Builder
 public class Business {
 
+    // options the owner can pick for how many hours before the appointment a client can still
+    // cancel and get the deposit back
+    public static final int DEFAULT_CANCELLATION_NOTICE_HOURS = 24;
+    public static final Set<Integer> ALLOWED_CANCELLATION_NOTICE_HOURS = Set.of(24, 48, 72, 96);
+
+    // options the owner can pick for the minimum hours between booking and the start of the
+    // appointment. 0 is how it worked before: a slot can be booked until it starts
+    public static final int DEFAULT_MIN_BOOKING_NOTICE_HOURS = 0;
+    public static final Set<Integer> ALLOWED_MIN_BOOKING_NOTICE_HOURS = Set.of(0, 1, 2, 4, 12, 24);
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, unique = true, updatable = false)
+    private UUID publicId;
+
+    @Column(nullable = false, length = 100)
     private String name;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 255)
     private String email;
 
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 100)
     private String slug;
 
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private String phone;
 
+    @Column(length = 300)
     private String description;
 
-    private Boolean automaticSchedule;
+    @Builder.Default
+    private Boolean automaticSchedule = false;
 
     private LocalDateTime scheduleEnd;
 
-    private Integer scheduleDaysToCreate;
+    @Min(1) @Max(180) // validation for a reasonable range of days to create schedule
+    @Builder.Default
+    private Integer scheduleDaysToCreate = 30;
 
-    private Integer scheduleAnticipation;
+    @Min(0) @Max(60) // validation for a reasonable anticipation days to renew schedule
+    @Builder.Default
+    private Integer scheduleAnticipation = 5;
 
-    private Boolean active;
+    // businesses created before this column existed get the default from LegacySchemaRepair
+    @Builder.Default
+    private Integer cancellationNoticeHours = DEFAULT_CANCELLATION_NOTICE_HOURS;
+
+    // only applies to clients booking a slot. the owner can still add an appointment by hand for
+    // ten minutes from now. businesses created before this column existed get 0 from LegacySchemaRepair
+    @Builder.Default
+    private Integer minBookingNoticeHours = DEFAULT_MIN_BOOKING_NOTICE_HOURS;
+
+    private Boolean deleted;
 
     @PrePersist
     protected void OnCreate() {
-        active = true;
+        this.deleted = false;
+        this.publicId = UUID.randomUUID();
     }
 
     @OneToOne(fetch = FetchType.LAZY)

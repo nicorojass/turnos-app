@@ -2,6 +2,7 @@ package com.grupo8.turnos_app.modules.day_schedule.repository;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 
@@ -13,4 +14,5 @@ public interface DayScheduleRepository extends JpaRepository<DaySchedule, Long> 
     List<DaySchedule> findAllByBusinessId(Long businessId);
 
     Optional<DaySchedule> findByBusinessIdAndDay(Long businessId, DayOfWeek day);
+    Optional<DaySchedule> findByPublicId(UUID publicId);
 }
