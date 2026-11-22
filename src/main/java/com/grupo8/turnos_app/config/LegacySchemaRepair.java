@@ -54,6 +54,10 @@ public class LegacySchemaRepair {
         update("UPDATE deposits SET cancellation_notice_hours = 24 WHERE cancellation_notice_hours IS NULL",
                 "deposits.cancellation_notice_hours NULL -> 24");
 
+        // before the minimum booking notice existed a slot could be booked until it started, which is 0
+        update("UPDATE businesses SET min_booking_notice_hours = 0 WHERE min_booking_notice_hours IS NULL",
+                "businesses.min_booking_notice_hours NULL -> 0");
+
         // UUID() is evaluated once per row, so each row gets its own id
         update("UPDATE business_types SET public_id = UUID_TO_BIN(UUID()) WHERE public_id = " + ZERO_UUID,
                 "business_types.public_id all zeros -> new uuid");
